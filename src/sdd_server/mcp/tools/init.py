@@ -20,7 +20,7 @@ def register_tools(mcp: FastMCP) -> None:
         project_name: str,
         description: str = "",
         project_root: str = "",
-        ctx: Context = None,  # type: ignore[assignment]
+        ctx: Context | None = None,  # type: ignore[type-arg]
     ) -> dict[str, object]:
         """Initialize a new SDD project: create specs/ structure, render templates, install git hook.
 
@@ -55,7 +55,7 @@ def register_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def sdd_preflight(
-        ctx: Context = None,  # type: ignore[assignment]
+        ctx: Context | None = None,  # type: ignore[type-arg]
     ) -> dict[str, object]:
         """Run preflight checks: validate spec structure and return enforcement status.
 

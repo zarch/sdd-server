@@ -1,19 +1,19 @@
-"""MCP tools: feature create/list."""
+"""MCP tools: feature create and list."""
 
 from __future__ import annotations
-
-from pathlib import Path
 
 from mcp.server.fastmcp import Context, FastMCP
 
 from sdd_server.core.spec_manager import SpecManager
+from sdd_server.infrastructure.exceptions import ValidationError
 
 
-def _get_spec_manager(ctx: Context | None) -> SpecManager:
+def _get_spec_manager(ctx: Context | None) -> SpecManager:  # type: ignore[type-arg]
     if ctx and hasattr(ctx, "request_context") and ctx.request_context:
         state = ctx.request_context.lifespan_context
-        return state["spec_manager"]  # type: ignore[return-value]
+        return state["spec_manager"]
     import os
+    from pathlib import Path
 
     root = Path(os.getenv("SDD_PROJECT_ROOT", ".")).resolve()
     return SpecManager(root)
@@ -26,12 +26,12 @@ def register_tools(mcp: FastMCP) -> None:
     async def sdd_feature_create(
         name: str,
         description: str = "",
-        ctx: Context = None,  # type: ignore[assignment]
+        ctx: Context | None = None,  # type: ignore[type-arg]
     ) -> dict[str, object]:
-        """Create a new feature with spec templates.
+        """Create a new feature subdirectory under specs/features/<name>.
 
         Args:
-            name: Feature name (lowercase letters, digits, hyphens; start with letter).
+            name: Feature name (lowercase, hyphens allowed).
             description: Short feature description.
         """
         mgr = _get_spec_manager(ctx)
@@ -41,14 +41,13 @@ def register_tools(mcp: FastMCP) -> None:
                 "success": True,
                 "feature": name,
                 "path": str(feature_dir),
-                "message": f"Feature '{name}' created at '{feature_dir}'",
             }
-        except Exception as exc:
-            return {"success": False, "error": str(exc)}
+        except ValidationError as exc:
+            return {"error": str(exc)}
 
     @mcp.tool()
     async def sdd_feature_list(
-        ctx: Context = None,  # type: ignore[assignment]
+        ctx: Context | None = None,  # type: ignore[type-arg]
     ) -> dict[str, object]:
         """List all features in the project."""
         mgr = _get_spec_manager(ctx)

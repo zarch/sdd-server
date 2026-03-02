@@ -11,10 +11,10 @@ from sdd_server.infrastructure.exceptions import SpecNotFoundError
 from sdd_server.models.spec import SpecType
 
 
-def _get_spec_manager(ctx: Context | None) -> SpecManager:
+def _get_spec_manager(ctx: Context | None) -> SpecManager:  # type: ignore[type-arg]
     if ctx and hasattr(ctx, "request_context") and ctx.request_context:
         state = ctx.request_context.lifespan_context
-        return state["spec_manager"]  # type: ignore[return-value]
+        return state["spec_manager"]
     import os
 
     root = Path(os.getenv("SDD_PROJECT_ROOT", ".")).resolve()
@@ -28,7 +28,7 @@ def register_tools(mcp: FastMCP) -> None:
     async def sdd_spec_read(
         spec_type: str,
         feature: str = "",
-        ctx: Context = None,  # type: ignore[assignment]
+        ctx: Context | None = None,  # type: ignore[type-arg]
     ) -> dict[str, object]:
         """Read the content of a spec file.
 
@@ -56,7 +56,7 @@ def register_tools(mcp: FastMCP) -> None:
         content: str,
         feature: str = "",
         mode: str = "overwrite",
-        ctx: Context = None,  # type: ignore[assignment]
+        ctx: Context | None = None,  # type: ignore[type-arg]
     ) -> dict[str, object]:
         """Write content to a spec file.
 
@@ -82,7 +82,7 @@ def register_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def sdd_spec_list(
-        ctx: Context = None,  # type: ignore[assignment]
+        ctx: Context | None = None,  # type: ignore[type-arg]
     ) -> dict[str, object]:
         """List all spec files in the project.
 
