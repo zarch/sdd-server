@@ -16,7 +16,7 @@ from sdd_server.models.spec import SpecType
 from sdd_server.models.state import WorkflowState
 
 
-@pytest.fixture()
+@pytest.fixture()  # type: ignore[misc]
 def initialized_project(tmp_path: Path) -> Path:
     """Create a temp git repo and run sdd_init on it."""
     subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
@@ -92,10 +92,10 @@ def test_pre_commit_hook_installed(initialized_project: Path) -> None:
 
 
 def test_goose_recipes_created(initialized_project: Path) -> None:
-    """sdd_init should write all Goose YAML recipes to recipes/."""
+    """sdd_init should write all Goose YAML recipes to specs/recipes/."""
     recipe_mgr = RecipeManager(initialized_project)
     for role in ROLES:
-        path = initialized_project / "recipes" / f"{role}.yaml"
+        path = initialized_project / "specs" / "recipes" / f"{role}.yaml"
         assert path.exists(), f"Missing recipe for role '{role}'"
         issues = recipe_mgr.validate_recipe(role)
         assert issues == [], f"Recipe '{role}' invalid: {issues}"

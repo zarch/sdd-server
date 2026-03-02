@@ -55,7 +55,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
 
 def create_server() -> FastMCP:
     """Create and configure the FastMCP server with all tools and resources."""
-    server = FastMCP("sdd-server", version="0.1.0", lifespan=lifespan)
+    server = FastMCP("sdd-server", lifespan=lifespan)
 
     # Import tool/resource modules to trigger decorator registration
     # These imports must happen after server is created

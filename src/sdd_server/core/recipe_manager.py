@@ -97,8 +97,9 @@ class RecipeManager:
         """
         if role not in ROLES:
             raise ValueError(f"Unknown role '{role}'. Valid roles: {', '.join(ROLES)}")
-        template = self._jinja.get_template(f"{role}.yml.j2")
-        return template.render(**context)
+        template = self._jinja.get_template(f"{role}.yaml.j2")
+        result: str = template.render(**context)
+        return result
 
     def write_recipe(self, role: str, context: dict[str, object], overwrite: bool = False) -> Path:
         """Render and write a recipe file to recipes/<role>.yaml.
@@ -111,7 +112,7 @@ class RecipeManager:
         Returns:
             Path to the written recipe file.
         """
-        dest = self._paths.recipe_path(role)
+        dest: Path = self._paths.recipe_path(role)
         if not overwrite and self._fs.file_exists(dest):
             return dest
         content = self.render_recipe(role, context)

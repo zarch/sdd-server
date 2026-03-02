@@ -35,7 +35,7 @@ def test_recipes_dir_auto_created(tmp_project: Path) -> None:
     result = validator._check_recipes_dir()
     assert result.passed is True
     assert result.fatal is False
-    assert (tmp_project / "recipes").is_dir()
+    assert (tmp_project / "specs" / "recipes").is_dir()
 
 
 def test_git_repo_check(tmp_project: Path) -> None:

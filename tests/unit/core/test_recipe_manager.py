@@ -25,7 +25,7 @@ def test_render_recipe_unknown_role(tmp_project: Path) -> None:
 
 def test_write_recipe_creates_yaml_file(tmp_project: Path) -> None:
     mgr = RecipeManager(tmp_project)
-    (tmp_project / "recipes").mkdir()
+    (tmp_project / "specs" / "recipes").mkdir(parents=True, exist_ok=True)
     path = mgr.write_recipe("architect", {"project_name": "p", "description": "d"})
     assert path.exists()
     assert path.suffix == ".yaml"
@@ -33,21 +33,21 @@ def test_write_recipe_creates_yaml_file(tmp_project: Path) -> None:
 
 def test_write_recipe_skips_existing_by_default(tmp_project: Path) -> None:
     mgr = RecipeManager(tmp_project)
-    (tmp_project / "recipes").mkdir()
+    (tmp_project / "specs" / "recipes").mkdir(parents=True, exist_ok=True)
     mgr.write_recipe("architect", {"project_name": "p1", "description": ""})
-    first_content = (tmp_project / "recipes" / "architect.yaml").read_text()
+    first_content = (tmp_project / "specs" / "recipes" / "architect.yaml").read_text()
 
     # Write again without overwrite — should be skipped
     mgr.write_recipe("architect", {"project_name": "p2", "description": ""})
-    assert (tmp_project / "recipes" / "architect.yaml").read_text() == first_content
+    assert (tmp_project / "specs" / "recipes" / "architect.yaml").read_text() == first_content
 
 
 def test_write_recipe_overwrites_when_flag_set(tmp_project: Path) -> None:
     mgr = RecipeManager(tmp_project)
-    (tmp_project / "recipes").mkdir()
+    (tmp_project / "specs" / "recipes").mkdir(parents=True, exist_ok=True)
     mgr.write_recipe("architect", {"project_name": "p1", "description": ""})
     mgr.write_recipe("architect", {"project_name": "p2", "description": ""}, overwrite=True)
-    content = (tmp_project / "recipes" / "architect.yaml").read_text()
+    content = (tmp_project / "specs" / "recipes" / "architect.yaml").read_text()
     assert "p2" in content
 
 

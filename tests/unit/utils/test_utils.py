@@ -53,7 +53,7 @@ def test_specs_paths_properties(tmp_path: Path) -> None:
     assert paths.tasks_path == tmp_path / "specs" / "tasks.md"
     assert paths.metadata_path == tmp_path / "specs" / ".metadata.json"
     assert paths.context_hints_path == tmp_path / "specs" / ".context-hints"
-    assert paths.recipes_dir == tmp_path / "recipes"
+    assert paths.recipes_dir == tmp_path / "specs" / "recipes"
 
 
 def test_specs_paths_custom_specs_dir(tmp_path: Path) -> None:

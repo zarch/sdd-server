@@ -38,7 +38,7 @@ class SpecsPaths:
 
     @property
     def recipes_dir(self) -> Path:
-        return self.project_root / "recipes"
+        return self.specs_dir / "recipes"
 
     def feature_dir(self, name: str) -> Path:
         return self.specs_dir / name
