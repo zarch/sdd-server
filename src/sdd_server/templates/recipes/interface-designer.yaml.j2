@@ -1,4 +1,4 @@
-version: 1.0.0
+version: "1.0.0"
 title: "Interface Designer — {{ project_name }}"
 description: >
   Define all software-to-software interfaces for {{ project_name }}:
@@ -41,6 +41,11 @@ instructions: |
   Format interface definitions as structured tables or typed pseudocode.
   Write your output using the sdd_spec_write tool.
 
+prompt: |
+  Review specs/prd.md and specs/arch.md to define all software interfaces.
+  Document MCP tools, CLI contracts, file formats, and integration points.
+  Write findings to specs/arch.md using sdd_spec_write.
+
 activities:
   - "Document MCP tool schemas (inputs and outputs)"
   - "Define file format schemas and versioning"
@@ -57,3 +62,41 @@ parameters:
     requirement: optional
     default: ""
     description: Feature subdirectory to focus on (empty for root project).
+
+response:
+  json_schema:
+    type: object
+    properties:
+      spec_updated:
+        type: boolean
+        description: Whether specs/arch.md was updated with interface definitions
+      mcp_tools_defined:
+        type: array
+        items:
+          type: string
+        description: List of MCP tools documented
+      file_formats_defined:
+        type: array
+        items:
+          type: string
+        description: List of file formats documented
+      external_integrations:
+        type: array
+        items:
+          type: string
+        description: List of external APIs/systems integrated
+      breaking_changes_identified:
+        type: array
+        items:
+          type: string
+        description: Potential breaking changes to document
+    required:
+      - spec_updated
+
+retry:
+  max_retries: 2
+  timeout_seconds: 300
+  checks:
+    - type: shell
+      command: "test -f specs/arch.md"
+  on_failure: "echo 'Interface design failed. Ensure specs/prd.md and specs/arch.md exist.'"

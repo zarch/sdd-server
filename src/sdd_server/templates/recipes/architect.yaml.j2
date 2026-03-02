@@ -1,4 +1,4 @@
-version: 1.0.0
+version: "1.0.0"
 title: "Architect — {{ project_name }}"
 description: >
   Define the high-level technical architecture for {{ project_name }}.
@@ -31,6 +31,10 @@ instructions: |
 
   When done, use the sdd_spec_write tool to write the architecture to specs/arch.md.
 
+prompt: |
+  Review the PRD at specs/prd.md and generate the technical architecture.
+  Write the complete architecture document to specs/arch.md using sdd_spec_write.
+
 activities:
   - "Review specs/prd.md and produce initial architecture"
   - "Define component boundaries and interfaces"
@@ -49,3 +53,36 @@ parameters:
     description: >
       Feature subdirectory to focus on (e.g. "auth").
       Leave empty to work on the root project architecture.
+
+response:
+  json_schema:
+    type: object
+    properties:
+      spec_updated:
+        type: boolean
+        description: Whether specs/arch.md was successfully updated
+      components_defined:
+        type: array
+        items:
+          type: string
+        description: List of components defined in the architecture
+      decisions_made:
+        type: array
+        items:
+          type: string
+        description: Key architectural decisions made
+      open_questions:
+        type: array
+        items:
+          type: string
+        description: Questions requiring user or role input
+    required:
+      - spec_updated
+
+retry:
+  max_retries: 2
+  timeout_seconds: 300
+  checks:
+    - type: shell
+      command: "test -f specs/arch.md"
+  on_failure: "echo 'Architecture generation failed. Check specs/prd.md exists and is valid.'"

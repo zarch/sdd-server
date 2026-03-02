@@ -1,4 +1,4 @@
-version: 1.0.0
+version: "1.0.0"
 title: "Senior Developer — {{ project_name }}"
 description: >
   Define the KISS implementation strategy for {{ project_name }}:
@@ -37,7 +37,8 @@ instructions: |
 
      Example task format:
      | ID | Title | Role | Priority |
-     |t0000000 | Implement FileSystemClient.read_file | developer | high |
+     |----|-------|------|----------|
+     | t0000000 | Implement FileSystemClient.read_file | developer | high |
 
   5. **Definition of Done**
      - What tests must pass before a task is considered complete?
@@ -45,6 +46,11 @@ instructions: |
 
   Write task breakdowns to specs/tasks.md and implementation notes to
   specs/arch.md using the sdd_spec_write tool.
+
+prompt: |
+  Review specs/prd.md, specs/arch.md, and produce implementation-ready tasks.
+  Break down work into ≤2-hour tasks, identify shared utilities, and define testing strategy.
+  Write tasks to specs/tasks.md using sdd_spec_write.
 
 activities:
   - "Audit architecture for unnecessary complexity (KISS review)"
@@ -62,3 +68,46 @@ parameters:
     requirement: optional
     default: ""
     description: Feature subdirectory to focus on (empty for root project).
+
+response:
+  json_schema:
+    type: object
+    properties:
+      tasks_created:
+        type: integer
+        description: Number of implementation tasks created
+      tasks_updated:
+        type: boolean
+        description: Whether specs/tasks.md was updated
+      kiss_violations_found:
+        type: integer
+        description: Number of KISS principle violations identified
+      shared_utilities_identified:
+        type: array
+        items:
+          type: string
+        description: List of shared utilities to extract
+      hard_to_test_components:
+        type: array
+        items:
+          type: string
+        description: Components flagged as difficult to test
+      testing_strategy_defined:
+        type: boolean
+        description: Whether testing strategy was documented
+      definition_of_done:
+        type: array
+        items:
+          type: string
+        description: Criteria for task completion
+    required:
+      - tasks_created
+      - tasks_updated
+
+retry:
+  max_retries: 2
+  timeout_seconds: 300
+  checks:
+    - type: shell
+      command: "test -f specs/tasks.md"
+  on_failure: "echo 'Task breakdown failed. Ensure specs/prd.md and specs/arch.md exist.'"

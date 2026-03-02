@@ -1,4 +1,4 @@
-version: 1.0.0
+version: "1.0.0"
 title: "Security Analyst — {{ project_name }}"
 description: >
   Analyse {{ project_name }} specs for security risks and document
@@ -46,6 +46,11 @@ instructions: |
 
   Write your output using the sdd_spec_write tool.
 
+prompt: |
+  Perform a comprehensive security analysis of specs/prd.md and specs/arch.md.
+  Document threat model, input validation rules, file system security, and OWASP Top 10 checklist.
+  Write findings to specs/arch.md using sdd_spec_write.
+
 activities:
   - "Build threat model and identify trust boundaries"
   - "Audit input validation at all entry points"
@@ -62,3 +67,47 @@ parameters:
     requirement: optional
     default: ""
     description: Feature subdirectory to focus on (empty for root project).
+
+response:
+  json_schema:
+    type: object
+    properties:
+      spec_updated:
+        type: boolean
+        description: Whether specs/arch.md was updated with security analysis
+      threat_model_complete:
+        type: boolean
+        description: Whether threat model was documented
+      critical_findings:
+        type: integer
+        description: Number of critical security findings
+      high_findings:
+        type: integer
+        description: Number of high-priority findings
+      medium_findings:
+        type: integer
+        description: Number of medium-priority findings
+      low_findings:
+        type: integer
+        description: Number of low-priority findings
+      owasp_top_10_reviewed:
+        type: boolean
+        description: Whether OWASP Top 10 checklist was completed
+      input_validation_entry_points:
+        type: array
+        items:
+          type: string
+        description: List of entry points requiring input validation
+    required:
+      - spec_updated
+      - threat_model_complete
+      - critical_findings
+      - high_findings
+
+retry:
+  max_retries: 2
+  timeout_seconds: 300
+  checks:
+    - type: shell
+      command: "test -f specs/arch.md"
+  on_failure: "echo 'Security analysis failed. Ensure specs/prd.md and specs/arch.md exist.'"

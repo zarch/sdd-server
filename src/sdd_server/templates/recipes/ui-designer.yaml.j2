@@ -1,4 +1,4 @@
-version: 1.0.0
+version: "1.0.0"
 title: "UI/UX Designer — {{ project_name }}"
 description: >
   Define all human-software interactions for {{ project_name }}:
@@ -46,6 +46,11 @@ instructions: |
 
   Write your output using the sdd_spec_write tool.
 
+prompt: |
+  Review specs/prd.md and specs/arch.md to design the user interface.
+  Document CLI commands, configuration, environment variables, and error messages.
+  Write findings to specs/arch.md under "UI/UX Design" section using sdd_spec_write.
+
 activities:
   - "Define CLI commands, flags, and help text"
   - "Document environment variables and config file schema"
@@ -62,3 +67,42 @@ parameters:
     requirement: optional
     default: ""
     description: Feature subdirectory to focus on (empty for root project).
+
+response:
+  json_schema:
+    type: object
+    properties:
+      spec_updated:
+        type: boolean
+        description: Whether specs/arch.md was updated with UI/UX design
+      cli_commands_defined:
+        type: array
+        items:
+          type: string
+        description: List of CLI commands documented
+      environment_variables:
+        type: array
+        items:
+          type: string
+        description: List of environment variables documented
+      config_files_defined:
+        type: array
+        items:
+          type: string
+        description: List of configuration files documented
+      error_messages_designed:
+        type: integer
+        description: Number of error/warning messages designed
+      progress_indicators_defined:
+        type: boolean
+        description: Whether progress indicators were specified
+    required:
+      - spec_updated
+
+retry:
+  max_retries: 2
+  timeout_seconds: 300
+  checks:
+    - type: shell
+      command: "test -f specs/arch.md"
+  on_failure: "echo 'UI/UX design failed. Ensure specs/prd.md and specs/arch.md exist.'"

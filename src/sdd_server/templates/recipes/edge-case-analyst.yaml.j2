@@ -1,4 +1,4 @@
-version: 1.0.0
+version: "1.0.0"
 title: "Edge Case Analyst — {{ project_name }}"
 description: >
   Systematically identify edge cases in {{ project_name }} across user
@@ -49,6 +49,10 @@ instructions: |
   Append findings to specs/arch.md under "Edge Cases" or to
   specs/tasks.md as test tasks. Use the sdd_spec_write tool.
 
+prompt: |
+  Analyze specs/prd.md and specs/arch.md for edge cases across all three domains.
+  Document findings in specs/arch.md under a new "Edge Cases" section using sdd_spec_write.
+
 activities:
   - "Enumerate user interaction edge cases and boundary conditions"
   - "Identify data flow failure modes (partial writes, corruption)"
@@ -65,3 +69,46 @@ parameters:
     requirement: optional
     default: ""
     description: Feature subdirectory to focus on (empty for root project).
+
+response:
+  json_schema:
+    type: object
+    properties:
+      spec_updated:
+        type: boolean
+        description: Whether specs were updated with edge case findings
+      edge_cases_found:
+        type: object
+        properties:
+          user_interaction:
+            type: integer
+            description: Count of user interaction edge cases
+          data_flow:
+            type: integer
+            description: Count of data flow edge cases
+          process_flow:
+            type: integer
+            description: Count of process flow edge cases
+        required:
+          - user_interaction
+          - data_flow
+          - process_flow
+      test_scenarios_generated:
+        type: integer
+        description: Total number of test scenarios created
+      critical_issues:
+        type: array
+        items:
+          type: string
+        description: List of critical priority edge cases
+    required:
+      - spec_updated
+      - edge_cases_found
+
+retry:
+  max_retries: 2
+  timeout_seconds: 300
+  checks:
+    - type: shell
+      command: "grep -q 'Edge Case' specs/arch.md 2>/dev/null || true"
+  on_failure: "echo 'Edge case analysis failed. Ensure specs/prd.md and specs/arch.md exist.'"
