@@ -59,9 +59,11 @@ def create_server() -> FastMCP:
 
     # Import tool/resource modules to trigger decorator registration
     # These imports must happen after server is created
+    from sdd_server.mcp.prompts.review import register_prompts as reg_prompts
     from sdd_server.mcp.resources.specs import register_resources
     from sdd_server.mcp.tools.feature import register_tools as reg_feature
     from sdd_server.mcp.tools.init import register_tools as reg_init
+    from sdd_server.mcp.tools.review import register_tools as reg_review
     from sdd_server.mcp.tools.spec import register_tools as reg_spec
     from sdd_server.mcp.tools.status import register_tools as reg_status
 
@@ -69,6 +71,8 @@ def create_server() -> FastMCP:
     reg_spec(server)
     reg_feature(server)
     reg_status(server)
+    reg_review(server)
+    reg_prompts(server)
     register_resources(server)
 
     return server
