@@ -1,0 +1,60 @@
+[project]
+name = "sdd-server"
+version = "0.1.0"
+description = "Specs-Driven Development MCP Server"
+readme = "README.md"
+authors = [
+    { name = "Pietro Zambelli", email = "pietro.zambelli@synapsees.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "anyio>=4",
+    "jinja2>=3.1",
+    "markdown-it-py>=3",
+    "mcp>=1.6",
+    "pydantic>=2",
+    "pydantic-settings>=2",
+    "pyyaml>=6",
+    "rich>=13",
+    "structlog>=24",
+    "typer>=0.9",
+    "watchdog>=4",
+]
+
+[project.scripts]
+sdd-server = "sdd_server.__main__:main"
+sdd = "sdd_server.cli.main:app"
+
+[build-system]
+requires = ["uv_build>=0.10.6,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.8",
+    "pre-commit>=3.6",
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=4.1",
+    "pytest-mock>=3.12",
+    "ruff>=0.2",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+ignore_missing_imports = true
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--tb=short"

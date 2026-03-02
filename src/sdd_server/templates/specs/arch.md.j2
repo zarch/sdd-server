@@ -1,0 +1,50 @@
+# Architecture Document{% if feature %}: {{ feature }}{% endif %}
+
+**Project:** {{ project_name }}
+**Version:** 1.0
+**Date:** {{ date }}
+
+---
+
+## Overview
+
+{{ description }}
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Rationale |
+|-------|------------|-----------|
+| Language | Python 3.14+ | Type safety, ecosystem |
+| Framework | [Framework] | [Reason] |
+| Storage | File-based (git) | Stateless, no DB |
+
+---
+
+## Components
+
+### Component 1: [Name]
+
+**Responsibility:** [What it does]
+
+**Interface:**
+```python
+# Key interfaces / functions
+```
+
+---
+
+## Data Flow
+
+```
+[Input] → [Component A] → [Component B] → [Output]
+```
+
+---
+
+## Security
+
+- Path traversal prevention
+- Input validation at boundaries
+- Atomic file operations to prevent corruption

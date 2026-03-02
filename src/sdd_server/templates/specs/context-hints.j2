@@ -1,0 +1,43 @@
+# SDD Context Hints{% if feature %} — {{ feature }}{% endif %}
+
+**Project:** {{ project_name }}
+**Workflow State:** {{ workflow_state }}
+**Generated:** {{ date }}
+
+---
+
+## Current State
+
+The project is currently in **{{ workflow_state }}** state.
+{% if feature %}
+Working on feature: **{{ feature }}**
+{% endif %}
+
+---
+
+## Spec Pointers
+
+- **PRD:** `specs/{% if feature %}{{ feature }}/{% endif %}prd.md` — Product requirements
+- **Architecture:** `specs/{% if feature %}{{ feature }}/{% endif %}arch.md` — Technical design
+- **Tasks:** `specs/{% if feature %}{{ feature }}/{% endif %}tasks.md` — Implementation tasks
+
+---
+
+## Pending Actions
+
+{% if pending_actions %}
+{% for action in pending_actions %}
+- {{ action }}
+{% endfor %}
+{% else %}
+- No pending actions at this time.
+{% endif %}
+
+---
+
+## Guidelines
+
+- **Specs before code:** Do not implement without corresponding spec entries
+- **Atomic changes:** Keep changes small and focused
+- **Update tasks.md:** Mark tasks in_progress when starting, complete when done
+- **Commit message format:** Use conventional commits (`feat:`, `fix:`, `docs:`, etc.)
