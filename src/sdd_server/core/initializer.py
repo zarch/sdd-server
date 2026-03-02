@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from sdd_server.core.metadata import MetadataManager
+from sdd_server.core.recipe_manager import RecipeManager
 from sdd_server.core.spec_manager import SpecManager
 from sdd_server.infrastructure.filesystem import FileSystemClient
 from sdd_server.infrastructure.git import GitClient
@@ -30,6 +31,7 @@ class ProjectInitializer:
         self._paths = SpecsPaths(self.project_root, specs_dir)
         self._fs = FileSystemClient(self.project_root)
         self._metadata = MetadataManager(self.project_root, specs_dir)
+        self._recipes = RecipeManager(self.project_root, specs_dir)
 
     def init_new_project(self, name: str, description: str = "") -> None:
         """Create full specs/ structure, render templates, install git hook, write metadata."""
@@ -74,6 +76,9 @@ class ProjectInitializer:
         )
         self._metadata.save(state)
 
+        # Render Goose YAML recipes (primary format for role invocation)
+        self._recipes.init_recipes(name, description)
+
         # Install git pre-commit hook
         if self.git_client.is_repo() and not self.git_client.is_hook_installed("pre-commit"):
             self.git_client.install_hook("pre-commit")
@@ -109,6 +114,9 @@ class ProjectInitializer:
                 tmpl = jinja.get_template(template_name)
                 rendered = tmpl.render(**ctx)
                 self._fs.write_file(target, rendered)
+
+        # Render missing Goose recipes (skip existing to preserve customisations)
+        self._recipes.init_recipes(self.project_root.name, overwrite=False)
 
         # Initialize metadata if absent
         if not self._metadata.metadata_path.exists():

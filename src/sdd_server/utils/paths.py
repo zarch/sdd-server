@@ -54,3 +54,7 @@ class SpecsPaths:
 
     def feature_context_hints(self, name: str) -> Path:
         return self.feature_dir(name) / ".context-hints"
+
+    def recipe_path(self, role: str) -> Path:
+        """Return the path for a Goose YAML recipe file (recipes/<role>.yaml)."""
+        return self.recipes_dir / f"{role}.yaml"

@@ -9,6 +9,7 @@ import pytest
 
 from sdd_server.core.initializer import ProjectInitializer
 from sdd_server.core.metadata import MetadataManager
+from sdd_server.core.recipe_manager import ROLES, RecipeManager
 from sdd_server.core.spec_manager import SpecManager
 from sdd_server.infrastructure.git import GitClient
 from sdd_server.models.spec import SpecType
@@ -88,3 +89,13 @@ def test_pre_commit_hook_installed(initialized_project: Path) -> None:
     """sdd_init should install the pre-commit hook."""
     git = GitClient(initialized_project)
     assert git.is_hook_installed("pre-commit")
+
+
+def test_goose_recipes_created(initialized_project: Path) -> None:
+    """sdd_init should write all Goose YAML recipes to recipes/."""
+    recipe_mgr = RecipeManager(initialized_project)
+    for role in ROLES:
+        path = initialized_project / "recipes" / f"{role}.yaml"
+        assert path.exists(), f"Missing recipe for role '{role}'"
+        issues = recipe_mgr.validate_recipe(role)
+        assert issues == [], f"Recipe '{role}' invalid: {issues}"
