@@ -23,6 +23,31 @@ Working on feature: **{{ feature }}**
 
 ---
 
+## Goose Recipes
+
+Role recipes are in `recipes/` as Goose-compatible YAML files.
+Run each role in sequence before starting implementation.
+{% if roles %}
+| Role | Recipe | Purpose |
+|------|--------|---------|
+{% for role in roles %}
+| {{ role.title }} | `{{ role.recipe }}` | {{ role.purpose }} |
+{% endfor %}
+{% else %}
+| Role | Recipe |
+|------|--------|
+| Architect | `recipes/architect.yaml` |
+| UI/UX Designer | `recipes/ui-designer.yaml` |
+| Interface Designer | `recipes/interface-designer.yaml` |
+| Security Analyst | `recipes/security-analyst.yaml` |
+| Edge Case Analyst | `recipes/edge-case-analyst.yaml` |
+| Senior Developer | `recipes/senior-developer.yaml` |
+{% endif %}
+
+> Run a recipe: `goose run --recipe recipes/<role>.yaml`
+
+---
+
 ## Pending Actions
 
 {% if pending_actions %}
@@ -38,6 +63,7 @@ Working on feature: **{{ feature }}**
 ## Guidelines
 
 - **Specs before code:** Do not implement without corresponding spec entries
+- **Run roles in order:** architect → ui-designer → interface-designer → security-analyst → edge-case-analyst → senior-developer
 - **Atomic changes:** Keep changes small and focused
 - **Update tasks.md:** Mark tasks in_progress when starting, complete when done
 - **Commit message format:** Use conventional commits (`feat:`, `fix:`, `docs:`, etc.)

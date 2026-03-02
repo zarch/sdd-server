@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from sdd_server.core.metadata import MetadataManager
-from sdd_server.core.recipe_manager import RecipeManager
+from sdd_server.core.recipe_manager import ROLE_META, RecipeManager
 from sdd_server.core.spec_manager import SpecManager
 from sdd_server.infrastructure.filesystem import FileSystemClient
 from sdd_server.infrastructure.git import GitClient
@@ -52,9 +52,10 @@ class ProjectInitializer:
             "date": datetime.now(UTC).strftime("%Y-%m-%d"),
             "feature": None,
             "workflow_state": WorkflowState.UNINITIALIZED,
+            "roles": ROLE_META,
             "pending_actions": [
                 "Complete the PRD (prd.md)",
-                "Define the architecture (arch.md)",
+                "Run role reviews via Goose recipes (see recipes/)",
                 "Create initial tasks (tasks.md)",
             ],
         }
@@ -103,7 +104,11 @@ class ProjectInitializer:
             "date": datetime.now(UTC).strftime("%Y-%m-%d"),
             "feature": None,
             "workflow_state": WorkflowState.UNINITIALIZED,
-            "pending_actions": ["Review and update existing specs"],
+            "roles": ROLE_META,
+            "pending_actions": [
+                "Review and update existing specs",
+                "Run role reviews via Goose recipes (see recipes/)",
+            ],
         }
 
         for spec_type in (SpecType.PRD, SpecType.ARCH, SpecType.TASKS, SpecType.CONTEXT_HINTS):

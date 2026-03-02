@@ -43,6 +43,41 @@
 
 ---
 
+## Role Workflow
+
+Spec reviews are performed by Goose using the recipes in `recipes/`.
+Each role must complete its review before implementation begins.
+
+| # | Role | Recipe | Reviews |
+|---|------|--------|---------|
+{% if roles %}
+{% for role in roles %}
+| {{ loop.index }} | {{ role.title }} | `{{ role.recipe }}` | {{ role.purpose }} |
+{% endfor %}
+{% else %}
+| 1 | Architect | `recipes/architect.yaml` | System structure, tech stack, data flow |
+| 2 | UI/UX Designer | `recipes/ui-designer.yaml` | CLI, config, env vars, error messages |
+| 3 | Interface Designer | `recipes/interface-designer.yaml` | APIs, file formats, integration contracts |
+| 4 | Security Analyst | `recipes/security-analyst.yaml` | Threat model, input validation, auth |
+| 5 | Edge Case Analyst | `recipes/edge-case-analyst.yaml` | Boundary conditions, failure modes |
+| 6 | Senior Developer | `recipes/senior-developer.yaml` | KISS review, task breakdown, test strategy |
+{% endif %}
+
+**Recipe usage:**
+```bash
+# Run a single role
+goose run --recipe recipes/architect.yaml
+
+# Run all roles in sequence (after prd.md is complete)
+for recipe in recipes/architect.yaml recipes/ui-designer.yaml \
+              recipes/interface-designer.yaml recipes/security-analyst.yaml \
+              recipes/edge-case-analyst.yaml recipes/senior-developer.yaml; do
+  goose run --recipe "$recipe"
+done
+```
+
+---
+
 ## Security
 
 - Path traversal prevention

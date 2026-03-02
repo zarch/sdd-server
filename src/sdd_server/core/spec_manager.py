@@ -8,6 +8,7 @@ from pathlib import Path
 
 from jinja2 import Environment, PackageLoader
 
+from sdd_server.core.recipe_manager import ROLE_META
 from sdd_server.infrastructure.exceptions import SpecNotFoundError, ValidationError
 from sdd_server.infrastructure.filesystem import FileSystemClient
 from sdd_server.models.spec import SpecType
@@ -129,6 +130,7 @@ class SpecManager:
             "feature": name,
             "workflow_state": "uninitialized",
             "pending_actions": ["Complete PRD for this feature", "Create architecture spec"],
+            "roles": ROLE_META,
         }
 
         for spec_type in (SpecType.PRD, SpecType.ARCH, SpecType.TASKS, SpecType.CONTEXT_HINTS):

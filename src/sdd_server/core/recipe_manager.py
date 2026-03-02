@@ -24,6 +24,46 @@ ROLES: tuple[str, ...] = (
     "senior-developer",
 )
 
+# Human-readable metadata for each role — used in spec templates
+ROLE_META: tuple[dict[str, str], ...] = (
+    {
+        "name": "architect",
+        "title": "Architect",
+        "recipe": "recipes/architect.yaml",
+        "purpose": "System structure, tech stack, data flow",
+    },
+    {
+        "name": "ui-designer",
+        "title": "UI/UX Designer",
+        "recipe": "recipes/ui-designer.yaml",
+        "purpose": "CLI commands, config, env vars, error messages",
+    },
+    {
+        "name": "interface-designer",
+        "title": "Interface Designer",
+        "recipe": "recipes/interface-designer.yaml",
+        "purpose": "APIs, file formats, integration contracts",
+    },
+    {
+        "name": "security-analyst",
+        "title": "Security Analyst",
+        "recipe": "recipes/security-analyst.yaml",
+        "purpose": "Threat model, input validation, access controls",
+    },
+    {
+        "name": "edge-case-analyst",
+        "title": "Edge Case Analyst",
+        "recipe": "recipes/edge-case-analyst.yaml",
+        "purpose": "Boundary conditions, failure modes, test scenarios",
+    },
+    {
+        "name": "senior-developer",
+        "title": "Senior Developer",
+        "recipe": "recipes/senior-developer.yaml",
+        "purpose": "KISS review, task breakdown, testing strategy",
+    },
+)
+
 
 class RecipeManager:
     """Renders Goose YAML recipes from templates and writes them to recipes/."""

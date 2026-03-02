@@ -27,6 +27,36 @@
 
 ---
 
+## Development Workflow
+
+This project follows **Specs-Driven Development (SDD)**. All implementation
+must be preceded by spec reviews from the following roles, executed via
+Goose recipes:
+
+{% if roles %}
+{% for role in roles %}
+{{ loop.index }}. **{{ role.title }}** — `{{ role.recipe }}`
+   _{{ role.purpose }}_
+{% endfor %}
+{% else %}
+1. **Architect** — `recipes/architect.yaml`
+   _Define system structure, tech stack, and data flow_
+2. **UI/UX Designer** — `recipes/ui-designer.yaml`
+   _Define CLI commands, config, env vars, and error messages_
+3. **Interface Designer** — `recipes/interface-designer.yaml`
+   _Define APIs, file formats, and integration contracts_
+4. **Security Analyst** — `recipes/security-analyst.yaml`
+   _Threat model, input validation, and access controls_
+5. **Edge Case Analyst** — `recipes/edge-case-analyst.yaml`
+   _Boundary conditions, failure modes, and test scenarios_
+6. **Senior Developer** — `recipes/senior-developer.yaml`
+   _KISS review, task breakdown, and testing strategy_
+{% endif %}
+
+**Rule:** No code is written before all six roles have reviewed the specs.
+
+---
+
 ## Non-Functional Requirements
 
 ### Performance
@@ -44,6 +74,7 @@
 
 ## Success Metrics
 
+- [ ] All six role reviews completed (see `recipes/`)
 - [ ] Core features implemented and tested
 - [ ] Documentation complete
 - [ ] All tests passing
