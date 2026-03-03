@@ -1,0 +1,49 @@
+"""{{ class_name }} — {{ description | default("Pydantic model", true) }}.
+
+{% if author %}
+**Author:** {{ author }}
+{% endif %}
+**Created:** {{ date }}
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from pydantic import Field
+
+from sdd_server.models.base import SDDBaseModel
+
+
+{% for model in models | default([]) %}
+class {{ model.name }}(SDDBaseModel):
+    """{{ model.description | default(model.name, true) }}."""
+
+    {% if model.fields %}
+    {% for field in model.fields %}
+    {{ field.name }}: {{ field.type }}{% if field.default is defined %} = {{ field.default }}{% elif field.required %}{% else %} | None = None{% endif %}
+    {% if field.description %}  # {{ field.description }}{% endif %}
+
+    {% endfor %}
+    {% else %}
+    # TODO: Add fields
+    pass
+    {% endif %}
+
+{% endfor %}
+{% if not models %}
+class {{ class_name | default("Model", true) }}(SDDBaseModel):
+    """{{ description | default("A data model.", true) }}."""
+
+    # TODO: Add fields
+    pass
+{% endif %}
+
+__all__ = [
+    {% for model in models | default([]) %}
+    "{{ model.name }}",
+    {% endfor %}
+    {% if not models %}
+    "{{ class_name | default("Model", true) }}",
+    {% endif %}
+]

@@ -1,0 +1,108 @@
+"""{{ tool_name }} — {{ description | default("MCP tool", true) }}.
+
+{% if author %}
+**Author:** {{ author }}
+{% endif %}
+**Created:** {{ date }}
+
+MCP tools for {{ tool_name | default("feature", true) }}.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from mcp.server.fastmcp import Context, FastMCP
+
+from sdd_server.utils.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+# -----------------------------------------------------------------------------
+# Tool Functions
+# -----------------------------------------------------------------------------
+
+
+{% for tool in tools | default([]) %}
+async def sdd_{{ tool.prefix | default(tool_name | lower, true) }}_{{ tool.name }}(
+    ctx: Context | None = None,  # type: ignore[type-arg]
+    {% for param in tool.params | default([]) %}
+    {{ param.name }}: {{ param.type }}{% if param.default %} = {{ param.default }}{% endif %},
+    {% endfor %}
+) -> dict[str, Any]:
+    """{{ tool.description | default(tool.name, true) }}.
+
+    Args:
+        {% for param in tool.params | default([]) %}
+        {{ param.name }}: {{ param.description | default("", true) }}
+        {% endfor %}
+
+    Returns:
+        Result dictionary with success status
+    """
+    logger.info("Tool called", tool="{{ tool.name }}")
+    {% if tool.body %}
+    {{ tool.body }}
+    {% else %}
+    return {
+        "success": True,
+        "message": "Tool {{ tool.name }} executed",
+    }
+    {% endif %}
+
+{% endfor %}
+{% if not tools %}
+async def sdd_{{ tool_name | lower }}_example(
+    ctx: Context | None = None,  # type: ignore[type-arg]
+    name: str = "",
+) -> dict[str, Any]:
+    """Example MCP tool - replace with actual implementation.
+
+    Args:
+        name: Example parameter
+
+    Returns:
+        Result dictionary with success status
+    """
+    logger.info("Tool called", tool="example", name=name)
+
+    return {
+        "success": True,
+        "message": f"Hello, {name or 'World'}!",
+    }
+{% endif %}
+
+
+# -----------------------------------------------------------------------------
+# Registration
+# -----------------------------------------------------------------------------
+
+
+def register_tools(server: FastMCP) -> None:
+    """Register all {{ tool_name | default("tool", true) }} tools with the MCP server."""
+    {% for tool in tools | default([]) %}
+    server.tool(
+        name="sdd_{{ tool.prefix | default(tool_name | lower, true) }}_{{ tool.name }}",
+        description="{{ tool.description | default(tool.name, true) }}",
+    )(sdd_{{ tool.prefix | default(tool_name | lower, true) }}_{{ tool.name }})
+    {% endfor %}
+    {% if not tools %}
+    server.tool(
+        name="sdd_{{ tool_name | lower }}_example",
+        description="Example MCP tool",
+    )(sdd_{{ tool_name | lower }}_example)
+    {% endif %}
+
+    logger.debug("Registered {{ tool_name | default("tool", true) }} tools")
+
+
+__all__ = [
+    {% for tool in tools | default([]) %}
+    "sdd_{{ tool.prefix | default(tool_name | lower, true) }}_{{ tool.name }}",
+    {% endfor %}
+    {% if not tools %}
+    "sdd_{{ tool_name | lower }}_example",
+    {% endif %}
+    "register_tools",
+]

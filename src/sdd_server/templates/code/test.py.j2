@@ -1,0 +1,76 @@
+"""Tests for {{ module_name }}.
+
+{% if author %}
+**Author:** {{ author }}
+{% endif %}
+**Created:** {{ date }}
+"""
+
+from __future__ import annotations
+
+import pytest
+
+{% if imports %}
+{% for imp in imports %}
+{{ imp }}
+{% endfor %}
+
+{% endif %}
+from {{ import_path | default("sdd_server." + module_name, true) }} import (
+    {% for cls in classes | default([]) %}
+    {{ cls.name }},
+    {% endfor %}
+    {% for func in functions | default([]) %}
+    {{ func.name }},
+    {% endfor %}
+)
+
+
+{% for cls in classes | default([{"name": class_name | default(module_name | title)}]) %}
+class Test{{ cls.name }}:
+    """Tests for {{ cls.name }}."""
+
+    {% if cls and cls.methods %}
+    {% for method in cls.methods %}
+    def test_{{ method.name | default("method", true) }}(self) -> None:
+        """Test {{ method.name | default("method", true) }}."""
+        # Arrange
+        # TODO: Set up test data
+
+        # Act
+        # TODO: Execute the code under test
+
+        # Assert
+        # TODO: Verify the results
+        pytest.skip("Not implemented")
+
+    {% endfor %}
+    {% else %}
+    def test_init(self) -> None:
+        """Test initialization."""
+        # Arrange & Act
+        instance = {{ cls.name }}()
+
+        # Assert
+        assert instance is not None
+
+    def test_placeholder(self) -> None:
+        """Placeholder test - replace with actual tests."""
+        pytest.skip("Replace with actual tests")
+    {% endif %}
+
+{% endfor %}
+{% for func in functions | default([]) %}
+
+def test_{{ func.name }}() -> None:
+    """Test {{ func.name }}."""
+    # Arrange
+    # TODO: Set up test data
+
+    # Act
+    # TODO: Execute the function
+
+    # Assert
+    # TODO: Verify the results
+    pytest.skip("Not implemented")
+{% endfor %}

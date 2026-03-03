@@ -1,0 +1,70 @@
+"""{{ module_name }}.{{ description | default("", true) }}
+
+{% if author %}
+**Author:** {{ author }}
+{% endif %}
+**Created:** {{ date }}
+"""
+
+from __future__ import annotations
+
+{% if imports %}
+{% for imp in imports %}
+{{ imp }}
+{% endfor %}
+
+{% endif -%}
+{% if classes %}
+
+{% for cls in classes %}
+class {{ cls.name }}{% if cls.base %}({{ cls.base }}){% endif %}:
+    """{{ cls.description | default(cls.name, true) }}."""
+
+    {% if cls.attributes %}
+    # Attributes
+    {% for attr in cls.attributes %}
+    {{ attr.name }}: {{ attr.type }}{% if attr.default %} = {{ attr.default }}{% endif %}
+    {% endfor %}
+
+    {% endif -%}
+    {% if cls.methods %}
+    {% for method in cls.methods %}
+    def {{ method.name }}(self{% if method.params %}, {{ method.params | join(", ") }}{% endif %}){% if method.return_type %} -> {{ method.return_type }}{% endif %}:
+        """{{ method.description | default(method.name, true) }}."""
+        {{ method.body | default("pass", true) }}
+
+    {% endfor %}
+    {% else %}
+    def __init__(self) -> None:
+        """Initialize {{ cls.name }}."""
+        pass
+
+    {% endif %}
+{% endfor %}
+{% else %}
+class {{ class_name | default(module_name | title, true) }}:
+    """{{ description | default(module_name, true) }}."""
+
+    def __init__(self) -> None:
+        """Initialize {{ class_name | default(module_name | title, true) }}."""
+        pass
+{% endif %}
+
+{% if functions %}
+
+{% for func in functions %}
+def {{ func.name }}({% if func.params %}{{ func.params | join(", ") }}{% endif %}){% if func.return_type %} -> {{ func.return_type }}{% endif %}:
+    """{{ func.description | default(func.name, true) }}."""
+    {{ func.body | default("pass", true) }}
+
+{% endfor %}
+{% endif %}
+
+__all__ = [
+    {% for cls in classes | default([]) %}
+    "{{ cls.name }}",
+    {% endfor %}
+    {% for func in functions | default([]) %}
+    "{{ func.name }}",
+    {% endfor %}
+]

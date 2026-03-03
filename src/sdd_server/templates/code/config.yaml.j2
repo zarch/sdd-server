@@ -1,0 +1,38 @@
+# {{ config_name | default("Config", true) }}
+
+{% if description %}
+# {{ description }}
+{% endif %}
+
+{% for section in sections | default([]) %}
+# {{ section.description | default(section.name, true) }}
+{{ section.name | upper }}:
+{% for key, value in section.items.items() %}
+{% if value is mapping %}
+  {{ key }}:
+{% for k, v in value.items() %}
+    {{ k }}: {{ v | tojson if v is string or v is number else v }}
+{% endfor %}
+{% elif value is sequence and value is not string %}
+  {{ key }}:
+{% for item in value %}
+    - {{ item | tojson if item is string else item }}
+{% endfor %}
+{% else %}
+  {{ key }}: {{ value | tojson if value is string else value }}
+{% endif %}
+{% endfor %}
+
+{% endfor %}
+{% if not sections %}
+# SDD configuration
+SDD:
+  project_name: {{ project_name | default("my-project") | tojson }}
+  version: "0.1.0"
+
+# Path configuration
+PATHS:
+  specs_dir: "specs"
+  recipes_dir: "recipes"
+  data_dir: ".sdd"
+{% endif %}

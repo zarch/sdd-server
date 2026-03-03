@@ -1,6 +1,13 @@
 """SDD models package."""
 
 from sdd_server.models.base import SDDBaseModel
+from sdd_server.models.codegen import (
+    CodeTemplate,
+    CodeTemplateType,
+    GeneratedFile,
+    GenerationResult,
+    ScaffoldConfig,
+)
 from sdd_server.models.lifecycle import (
     FeatureLifecycle,
     LifecycleState,
@@ -27,15 +34,20 @@ from sdd_server.models.task import (
 
 __all__ = [
     "BypassRecord",
+    "CodeTemplate",
+    "CodeTemplateType",
     "Feature",
     "FeatureLifecycle",
     "FeatureState",
+    "GeneratedFile",
+    "GenerationResult",
     "LifecycleState",
     "LifecycleTransition",
     "PRDMetadata",
     "ProjectLifecycle",
     "ProjectState",
     "SDDBaseModel",
+    "ScaffoldConfig",
     "SpecFile",
     "SpecType",
     "StateHistory",
