@@ -31,6 +31,15 @@ from sdd_server.models.task import (
     parse_tasks_from_markdown,
     serialize_tasks_to_markdown,
 )
+from sdd_server.models.validation import (
+    ProjectValidationResult,
+    SpecValidationResult,
+    ValidationIssue,
+    ValidationRule,
+    ValidationRuleType,
+    ValidationSeverity,
+    get_default_rules,
+)
 
 __all__ = [
     "BypassRecord",
@@ -46,17 +55,24 @@ __all__ = [
     "PRDMetadata",
     "ProjectLifecycle",
     "ProjectState",
+    "ProjectValidationResult",
     "SDDBaseModel",
     "ScaffoldConfig",
     "SpecFile",
     "SpecType",
+    "SpecValidationResult",
     "StateHistory",
     "Task",
     "TaskBreakdown",
     "TaskPriority",
     "TaskStatus",
+    "ValidationIssue",
+    "ValidationRule",
+    "ValidationRuleType",
+    "ValidationSeverity",
     "WorkflowState",
     "generate_task_id",
+    "get_default_rules",
     "parse_tasks_from_markdown",
     "serialize_tasks_to_markdown",
 ]

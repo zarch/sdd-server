@@ -13,6 +13,7 @@ from sdd_server.core.code_generator import CodeGenerator
 from sdd_server.core.lifecycle import FeatureLifecycleManager
 from sdd_server.core.metadata import MetadataManager
 from sdd_server.core.spec_manager import SpecManager
+from sdd_server.core.spec_validator import SpecValidator
 from sdd_server.core.startup import StartupValidator
 from sdd_server.core.task_manager import TaskBreakdownManager
 from sdd_server.infrastructure.git import GitClient
@@ -37,6 +38,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
     lifecycle_manager = FeatureLifecycleManager(project_root)
     task_manager = TaskBreakdownManager(project_root)
     code_generator = CodeGenerator(project_root, specs_dir)
+    spec_validator = SpecValidator(project_root, specs_dir)
 
     # Sync lifecycle with existing features
     features = spec_manager.list_features()
@@ -70,6 +72,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
         "lifecycle_manager": lifecycle_manager,
         "task_manager": task_manager,
         "code_generator": code_generator,
+        "spec_validator": spec_validator,
     }
 
     logger.info("sdd_server_stopped")
@@ -91,6 +94,7 @@ def create_server() -> FastMCP:
     from sdd_server.mcp.tools.spec import register_tools as reg_spec
     from sdd_server.mcp.tools.status import register_tools as reg_status
     from sdd_server.mcp.tools.task import register_tools as reg_task
+    from sdd_server.mcp.tools.validation import register_tools as reg_validation
 
     reg_init(server)
     reg_spec(server)
@@ -100,6 +104,7 @@ def create_server() -> FastMCP:
     reg_lifecycle(server)
     reg_task(server)
     reg_codegen(server)
+    reg_validation(server)
     reg_prompts(server)
     register_resources(server)
 

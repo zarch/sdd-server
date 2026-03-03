@@ -58,3 +58,27 @@ class SpecsPaths:
     def recipe_path(self, role: str) -> Path:
         """Return the path for a Goose YAML recipe file (recipes/<role>.yaml)."""
         return self.recipes_dir / f"{role}.yaml"
+
+    def root_spec_path(self, spec_type) -> Path:
+        """Return the path for a root spec file by type."""
+        from sdd_server.models.spec import SpecType
+
+        spec_map = {
+            SpecType.PRD: self.prd_path,
+            SpecType.ARCH: self.arch_path,
+            SpecType.TASKS: self.tasks_path,
+            SpecType.CONTEXT_HINTS: self.context_hints_path,
+        }
+        return spec_map[spec_type]
+
+    def feature_spec_path(self, feature: str, spec_type) -> Path:
+        """Return the path for a feature spec file by type."""
+        from sdd_server.models.spec import SpecType
+
+        spec_map = {
+            SpecType.PRD: self.feature_prd(feature),
+            SpecType.ARCH: self.feature_arch(feature),
+            SpecType.TASKS: self.feature_tasks(feature),
+            SpecType.CONTEXT_HINTS: self.feature_context_hints(feature),
+        }
+        return spec_map[spec_type]
