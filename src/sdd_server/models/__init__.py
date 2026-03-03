@@ -15,7 +15,15 @@ from sdd_server.models.state import (
     StateHistory,
     WorkflowState,
 )
-from sdd_server.models.task import Task, TaskStatus, generate_task_id
+from sdd_server.models.task import (
+    Task,
+    TaskBreakdown,
+    TaskPriority,
+    TaskStatus,
+    generate_task_id,
+    parse_tasks_from_markdown,
+    serialize_tasks_to_markdown,
+)
 
 __all__ = [
     "BypassRecord",
@@ -32,7 +40,11 @@ __all__ = [
     "SpecType",
     "StateHistory",
     "Task",
+    "TaskBreakdown",
+    "TaskPriority",
     "TaskStatus",
     "WorkflowState",
     "generate_task_id",
+    "parse_tasks_from_markdown",
+    "serialize_tasks_to_markdown",
 ]

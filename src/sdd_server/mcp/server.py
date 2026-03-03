@@ -13,6 +13,7 @@ from sdd_server.core.lifecycle import FeatureLifecycleManager
 from sdd_server.core.metadata import MetadataManager
 from sdd_server.core.spec_manager import SpecManager
 from sdd_server.core.startup import StartupValidator
+from sdd_server.core.task_manager import TaskBreakdownManager
 from sdd_server.infrastructure.git import GitClient
 from sdd_server.utils.logging import configure_logging, get_logger
 
@@ -33,6 +34,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
     metadata = MetadataManager(project_root, specs_dir)
     git_client = GitClient(project_root)
     lifecycle_manager = FeatureLifecycleManager(project_root)
+    task_manager = TaskBreakdownManager(project_root)
 
     # Sync lifecycle with existing features
     features = spec_manager.list_features()
@@ -40,6 +42,12 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
         added = lifecycle_manager.sync_with_spec_manager(features)
         if added > 0:
             logger.info("synced_features", count=added)
+
+    # Sync tasks from existing spec files
+    sync_results = task_manager.sync_all_specs()
+    total_changes = sum(sync_results.values())
+    if total_changes > 0:
+        logger.info("synced_tasks", changes=total_changes)
 
     # Run startup validation (non-blocking: log warnings, raise on fatal)
     validator = StartupValidator(project_root, specs_dir)
@@ -58,6 +66,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
         "metadata": metadata,
         "git_client": git_client,
         "lifecycle_manager": lifecycle_manager,
+        "task_manager": task_manager,
     }
 
     logger.info("sdd_server_stopped")
@@ -77,6 +86,7 @@ def create_server() -> FastMCP:
     from sdd_server.mcp.tools.review import register_tools as reg_review
     from sdd_server.mcp.tools.spec import register_tools as reg_spec
     from sdd_server.mcp.tools.status import register_tools as reg_status
+    from sdd_server.mcp.tools.task import register_tools as reg_task
 
     reg_init(server)
     reg_spec(server)
@@ -84,6 +94,7 @@ def create_server() -> FastMCP:
     reg_status(server)
     reg_review(server)
     reg_lifecycle(server)
+    reg_task(server)
     reg_prompts(server)
     register_resources(server)
 
