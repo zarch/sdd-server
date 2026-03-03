@@ -9,6 +9,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from sdd_server.core.lifecycle import FeatureLifecycleManager
 from sdd_server.core.metadata import MetadataManager
 from sdd_server.core.spec_manager import SpecManager
 from sdd_server.core.startup import StartupValidator
@@ -31,6 +32,14 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
     spec_manager = SpecManager(project_root, specs_dir)
     metadata = MetadataManager(project_root, specs_dir)
     git_client = GitClient(project_root)
+    lifecycle_manager = FeatureLifecycleManager(project_root)
+
+    # Sync lifecycle with existing features
+    features = spec_manager.list_features()
+    if features:
+        added = lifecycle_manager.sync_with_spec_manager(features)
+        if added > 0:
+            logger.info("synced_features", count=added)
 
     # Run startup validation (non-blocking: log warnings, raise on fatal)
     validator = StartupValidator(project_root, specs_dir)
@@ -48,6 +57,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
         "spec_manager": spec_manager,
         "metadata": metadata,
         "git_client": git_client,
+        "lifecycle_manager": lifecycle_manager,
     }
 
     logger.info("sdd_server_stopped")
@@ -63,6 +73,7 @@ def create_server() -> FastMCP:
     from sdd_server.mcp.resources.specs import register_resources
     from sdd_server.mcp.tools.feature import register_tools as reg_feature
     from sdd_server.mcp.tools.init import register_tools as reg_init
+    from sdd_server.mcp.tools.lifecycle import register_tools as reg_lifecycle
     from sdd_server.mcp.tools.review import register_tools as reg_review
     from sdd_server.mcp.tools.spec import register_tools as reg_spec
     from sdd_server.mcp.tools.status import register_tools as reg_status
@@ -72,6 +83,7 @@ def create_server() -> FastMCP:
     reg_feature(server)
     reg_status(server)
     reg_review(server)
+    reg_lifecycle(server)
     reg_prompts(server)
     register_resources(server)
 
