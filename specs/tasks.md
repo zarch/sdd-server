@@ -66,13 +66,13 @@ Specs-Driven Development (SDD) MCP Server - An MCP server that implements the SD
 
 ## Phase 4: Enhanced Workflow
 
-**Status:** 🔲 Pending
+**Status:** 🔄 In Progress (3/5 complete)
 
 | ID | Title | Priority | Status |
 |----|-------|----------|--------|
-| t0000200 | Feature lifecycle management | high | 🔲 |
-| t0000201 | Task breakdown from specs | high | 🔲 |
-| t0000202 | Code generation from templates | medium | 🔲 |
+| t0000200 | Feature lifecycle management | high | ✅ |
+| t0000201 | Task breakdown from specs | high | ✅ |
+| t0000202 | Code generation from templates | medium | ✅ |
 | t0000203 | Spec validation rules | medium | 🔲 |
 | t0000204 | Custom plugin support | low | 🔲 |
 
