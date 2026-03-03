@@ -10,6 +10,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from sdd_server.core.code_generator import CodeGenerator
+from sdd_server.core.custom_plugin_manager import CustomPluginManager
 from sdd_server.core.lifecycle import FeatureLifecycleManager
 from sdd_server.core.metadata import MetadataManager
 from sdd_server.core.spec_manager import SpecManager
@@ -39,6 +40,10 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
     task_manager = TaskBreakdownManager(project_root)
     code_generator = CodeGenerator(project_root, specs_dir)
     spec_validator = SpecValidator(project_root, specs_dir)
+    custom_plugin_manager = CustomPluginManager(project_root, specs_dir)
+
+    # Load custom plugins from directory
+    custom_plugin_manager.load_from_directory()
 
     # Sync lifecycle with existing features
     features = spec_manager.list_features()
@@ -73,6 +78,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
         "task_manager": task_manager,
         "code_generator": code_generator,
         "spec_validator": spec_validator,
+        "custom_plugin_manager": custom_plugin_manager,
     }
 
     logger.info("sdd_server_stopped")
@@ -87,6 +93,7 @@ def create_server() -> FastMCP:
     from sdd_server.mcp.prompts.review import register_prompts as reg_prompts
     from sdd_server.mcp.resources.specs import register_resources
     from sdd_server.mcp.tools.codegen import register_tools as reg_codegen
+    from sdd_server.mcp.tools.custom_plugins import register_tools as reg_custom_plugins
     from sdd_server.mcp.tools.feature import register_tools as reg_feature
     from sdd_server.mcp.tools.init import register_tools as reg_init
     from sdd_server.mcp.tools.lifecycle import register_tools as reg_lifecycle
@@ -105,6 +112,7 @@ def create_server() -> FastMCP:
     reg_task(server)
     reg_codegen(server)
     reg_validation(server)
+    reg_custom_plugins(server)
     reg_prompts(server)
     register_resources(server)
 

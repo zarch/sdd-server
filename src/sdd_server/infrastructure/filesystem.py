@@ -80,3 +80,14 @@ class FileSystemClient:
         if not safe_path.is_dir():
             raise FileSystemError(f"'{safe_path}' is not a directory")
         return sorted(safe_path.iterdir())
+
+    def delete_file(self, path: Path) -> bool:
+        """Delete a file. Returns True if deleted, False if not found."""
+        safe_path = self._validate_path(path)
+        if not safe_path.is_file():
+            return False
+        try:
+            safe_path.unlink()
+            return True
+        except OSError as exc:
+            raise FileSystemError(f"Cannot delete '{safe_path}': {exc}") from exc

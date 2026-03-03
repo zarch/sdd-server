@@ -8,6 +8,12 @@ from sdd_server.models.codegen import (
     GenerationResult,
     ScaffoldConfig,
 )
+from sdd_server.models.custom_plugin import (
+    CustomPluginConfig,
+    CustomPluginFile,
+    CustomPluginRegistry,
+    CustomPluginType,
+)
 from sdd_server.models.lifecycle import (
     FeatureLifecycle,
     LifecycleState,
@@ -45,6 +51,10 @@ __all__ = [
     "BypassRecord",
     "CodeTemplate",
     "CodeTemplateType",
+    "CustomPluginConfig",
+    "CustomPluginFile",
+    "CustomPluginRegistry",
+    "CustomPluginType",
     "Feature",
     "FeatureLifecycle",
     "FeatureState",
