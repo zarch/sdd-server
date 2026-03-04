@@ -166,9 +166,7 @@ class TaskBreakdown(SDDBaseModel):
 
 
 # Regex patterns for parsing tasks.md files
-_TASK_PATTERN = re.compile(
-    r"^\s*-\s*\[([ x])\]\s*(.+?)\s*(?:#([a-z0-9-]+))?\s*$", re.MULTILINE
-)
+_TASK_PATTERN = re.compile(r"^\s*-\s*\[([ x])\]\s*(.+?)\s*(?:#([a-z0-9-]+))?\s*$", re.MULTILINE)
 
 _ID_PATTERN = re.compile(r"^t[0-9a-f]{7}$", re.IGNORECASE)
 

@@ -6,15 +6,18 @@ from role executions via Server-Sent Events (SSE) and async queues.
 
 import asyncio
 import json
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, AsyncIterator, Callable
+from typing import Any
 
-from sdd_server.plugins.base import RoleStatus
 from sdd_server.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Background tasks set to prevent garbage collection of fire-and-forget tasks
+_background_tasks: set[asyncio.Task[object]] = set()
 
 
 class EventType(StrEnum):
@@ -75,12 +78,14 @@ class ProgressEvent:
         Returns:
             JSON formatted string
         """
-        return json.dumps({
-            "event": self.event_type.value,
-            "timestamp": self.timestamp.isoformat(),
-            "message": self.message,
-            "data": self.data,
-        })
+        return json.dumps(
+            {
+                "event": self.event_type.value,
+                "timestamp": self.timestamp.isoformat(),
+                "message": self.message,
+                "data": self.data,
+            }
+        )
 
 
 class EventEmitter:
@@ -208,7 +213,7 @@ async def event_stream(
             ):
                 break
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Send keepalive comment
             yield ": keepalive\n\n"
         except asyncio.CancelledError:
@@ -245,7 +250,7 @@ async def json_event_stream(
             ):
                 break
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Skip keepalive for JSON stream
             continue
         except asyncio.CancelledError:
@@ -253,6 +258,7 @@ async def json_event_stream(
 
 
 # Helper functions for creating common events
+
 
 def create_execution_started_event(
     total_roles: int,
@@ -365,6 +371,7 @@ def create_issue_found_event(
 
 # Callback factory for integration with ExecutionPipeline
 
+
 def create_progress_callback(
     emitter: EventEmitter,
     total_roles: int,
@@ -387,8 +394,10 @@ def create_progress_callback(
             total=progress.total_roles,
             running=progress.running_roles,
         )
-        # Create task but don't await - fire and forget
-        asyncio.create_task(emitter.emit(event))
+        # Create task with strong reference to prevent garbage collection
+        task = asyncio.create_task(emitter.emit(event))
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
 
     return callback
 
@@ -413,7 +422,9 @@ def create_result_callback(
             issue_count=len(result.issues) if hasattr(result, "issues") else 0,
             duration_seconds=result.duration_seconds,
         )
-        asyncio.create_task(emitter.emit(event))
+        task = asyncio.create_task(emitter.emit(event))
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
 
         # Also emit issue events
         if hasattr(result, "issues"):
@@ -422,6 +433,8 @@ def create_result_callback(
                     role_name=result.role,
                     issue_title=issue,
                 )
-                asyncio.create_task(emitter.emit(issue_event))
+                issue_task = asyncio.create_task(emitter.emit(issue_event))
+                _background_tasks.add(issue_task)
+                issue_task.add_done_callback(_background_tasks.discard)
 
     return callback

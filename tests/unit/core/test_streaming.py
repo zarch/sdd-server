@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from datetime import datetime
+from typing import ClassVar
 
 import pytest
 
@@ -14,10 +14,10 @@ from sdd_server.core.streaming import (
     create_execution_progress_event,
     create_execution_started_event,
     create_issue_found_event,
+    create_progress_callback,
     create_result_callback,
     create_role_completed_event,
     create_role_started_event,
-    create_progress_callback,
     event_stream,
     json_event_stream,
 )
@@ -226,10 +226,10 @@ class TestCallbackFactories:
 
         # Create mock progress object
         class MockProgress:
-            completed_roles = 3
-            failed_roles = 1
-            total_roles = 5
-            running_roles = ["reviewer"]
+            completed_roles: ClassVar[int] = 3
+            failed_roles: ClassVar[int] = 1
+            total_roles: ClassVar[int] = 5
+            running_roles: ClassVar[list[str]] = ["reviewer"]
 
         progress = MockProgress()
         callback(progress)
@@ -253,10 +253,10 @@ class TestCallbackFactories:
 
         # Create mock result object
         class MockResult:
-            role = "architect"
-            success = True
-            issues = ["issue1", "issue2"]
-            duration_seconds = 5.0
+            role: ClassVar[str] = "architect"
+            success: ClassVar[bool] = True
+            issues: ClassVar[list[str]] = ["issue1", "issue2"]
+            duration_seconds: ClassVar[float] = 5.0
 
         result = MockResult()
         callback(result)
@@ -324,9 +324,11 @@ class TestEventStreams:
         queue = await emitter.subscribe()
 
         # Emit completion event
-        await emitter.emit(create_execution_completed_event(
-            total_roles=1, successful=1, failed=0, duration_seconds=1.0
-        ))
+        await emitter.emit(
+            create_execution_completed_event(
+                total_roles=1, successful=1, failed=0, duration_seconds=1.0
+            )
+        )
 
         # Stream should break after completion
         events = []

@@ -2,8 +2,6 @@
 
 from datetime import datetime
 
-import pytest
-
 from sdd_server.core.aggregation import (
     AggregatedIssue,
     AggregatedReport,
@@ -275,7 +273,7 @@ class TestExtractFilePaths:
 
     def test_quoted_paths(self) -> None:
         """Test extracting quoted paths."""
-        text = 'Check "lib/utils.ts" and \'config.json\''
+        text = "Check \"lib/utils.ts\" and 'config.json'"
         paths = extract_file_paths(text)
         assert "lib/utils.ts" in paths
         assert "config.json" in paths
@@ -383,8 +381,22 @@ class TestResultAggregator:
         """Test adding multiple results."""
         aggregator = ResultAggregator()
         results = [
-            RoleResult(role="a", status=RoleStatus.COMPLETED, success=True, output="OK", issues=[], started_at=datetime.now()),
-            RoleResult(role="b", status=RoleStatus.COMPLETED, success=True, output="OK", issues=[], started_at=datetime.now()),
+            RoleResult(
+                role="a",
+                status=RoleStatus.COMPLETED,
+                success=True,
+                output="OK",
+                issues=[],
+                started_at=datetime.now(),
+            ),
+            RoleResult(
+                role="b",
+                status=RoleStatus.COMPLETED,
+                success=True,
+                output="OK",
+                issues=[],
+                started_at=datetime.now(),
+            ),
         ]
 
         aggregator.add_results(results)
@@ -395,11 +407,34 @@ class TestResultAggregator:
     def test_aggregate_counts(self) -> None:
         """Test aggregation counts."""
         aggregator = ResultAggregator()
-        aggregator.add_results([
-            RoleResult(role="a", status=RoleStatus.COMPLETED, success=True, output="OK", issues=[], started_at=datetime.now()),
-            RoleResult(role="b", status=RoleStatus.FAILED, success=False, output="Err", issues=["issue"], started_at=datetime.now()),
-            RoleResult(role="c", status=RoleStatus.SKIPPED, success=False, output="", issues=[], started_at=datetime.now()),
-        ])
+        aggregator.add_results(
+            [
+                RoleResult(
+                    role="a",
+                    status=RoleStatus.COMPLETED,
+                    success=True,
+                    output="OK",
+                    issues=[],
+                    started_at=datetime.now(),
+                ),
+                RoleResult(
+                    role="b",
+                    status=RoleStatus.FAILED,
+                    success=False,
+                    output="Err",
+                    issues=["issue"],
+                    started_at=datetime.now(),
+                ),
+                RoleResult(
+                    role="c",
+                    status=RoleStatus.SKIPPED,
+                    success=False,
+                    output="",
+                    issues=[],
+                    started_at=datetime.now(),
+                ),
+            ]
+        )
 
         report = aggregator.aggregate()
 
@@ -412,10 +447,24 @@ class TestResultAggregator:
         """Test issue aggregation."""
         aggregator = ResultAggregator()
         aggregator.add_result(
-            RoleResult(role="a", status=RoleStatus.FAILED, success=False, output="", issues=["critical security issue"], started_at=datetime.now())
+            RoleResult(
+                role="a",
+                status=RoleStatus.FAILED,
+                success=False,
+                output="",
+                issues=["critical security issue"],
+                started_at=datetime.now(),
+            )
         )
         aggregator.add_result(
-            RoleResult(role="b", status=RoleStatus.FAILED, success=False, output="", issues=["high priority bug"], started_at=datetime.now())
+            RoleResult(
+                role="b",
+                status=RoleStatus.FAILED,
+                success=False,
+                output="",
+                issues=["high priority bug"],
+                started_at=datetime.now(),
+            )
         )
 
         report = aggregator.aggregate()
@@ -427,7 +476,16 @@ class TestResultAggregator:
     def test_clear(self) -> None:
         """Test clearing aggregator."""
         aggregator = ResultAggregator()
-        aggregator.add_result(RoleResult(role="a", status=RoleStatus.COMPLETED, success=True, output="", issues=[], started_at=datetime.now()))
+        aggregator.add_result(
+            RoleResult(
+                role="a",
+                status=RoleStatus.COMPLETED,
+                success=True,
+                output="",
+                issues=[],
+                started_at=datetime.now(),
+            )
+        )
 
         aggregator.clear()
         report = aggregator.aggregate()

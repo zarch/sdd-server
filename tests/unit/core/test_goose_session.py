@@ -1,10 +1,9 @@
 """Tests for Goose session integration."""
 
-import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -179,11 +178,13 @@ class TestGooseSession:
         """Test parsing JSON output with tool calls."""
         session = GooseSession()
 
-        output = "\n".join([
-            json.dumps({"type": "tool_call", "name": "read_file"}),
-            json.dumps({"type": "tool_call", "name": "write_file"}),
-            json.dumps({"type": "response", "content": "Complete"}),
-        ])
+        output = "\n".join(
+            [
+                json.dumps({"type": "tool_call", "name": "read_file"}),
+                json.dumps({"type": "tool_call", "name": "write_file"}),
+                json.dumps({"type": "response", "content": "Complete"}),
+            ]
+        )
         text, tool_calls = session._parse_json_output(output)
 
         assert text == "Complete"
@@ -194,7 +195,7 @@ class TestGooseSession:
         session = GooseSession()
 
         output = "Some log output\n" + json.dumps({"type": "response", "content": "Done"})
-        text, tool_calls = session._parse_json_output(output)
+        text, _tool_calls = session._parse_json_output(output)
 
         assert text == "Done"
 

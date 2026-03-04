@@ -182,45 +182,110 @@ class AggregatedReport:
 # Severity classification keywords
 SEVERITY_KEYWORDS: dict[IssueSeverity, list[str]] = {
     IssueSeverity.CRITICAL: [
-        "security vulnerability", "critical", "severe", "exploit",
-        "injection", "authentication bypass", "data breach",
+        "security vulnerability",
+        "critical",
+        "severe",
+        "exploit",
+        "injection",
+        "authentication bypass",
+        "data breach",
     ],
     IssueSeverity.HIGH: [
-        "high", "important", "significant", "breaking", "major", "vulnerability",
+        "high",
+        "important",
+        "significant",
+        "breaking",
+        "major",
+        "vulnerability",
     ],
     IssueSeverity.MEDIUM: [
-        "medium", "moderate", "notable", "should", "recommended",
+        "medium",
+        "moderate",
+        "notable",
+        "should",
+        "recommended",
     ],
     IssueSeverity.LOW: [
-        "low", "minor", "small", "cosmetic", "optional", "consider",
+        "low",
+        "minor",
+        "small",
+        "cosmetic",
+        "optional",
+        "consider",
     ],
 }
 
 # Category classification keywords
 CATEGORY_KEYWORDS: dict[IssueCategory, list[str]] = {
     IssueCategory.SECURITY: [
-        "security", "auth", "permission", "access", "encrypt", "decrypt",
-        "secret", "password", "token", "vulnerability", "xss", "csrf", "sql injection",
+        "security",
+        "auth",
+        "permission",
+        "access",
+        "encrypt",
+        "decrypt",
+        "secret",
+        "password",
+        "token",
+        "vulnerability",
+        "xss",
+        "csrf",
+        "sql injection",
     ],
     IssueCategory.PERFORMANCE: [
-        "performance", "slow", "latency", "throughput", "memory", "cpu",
-        "optimization", "n+1", "caching",
+        "performance",
+        "slow",
+        "latency",
+        "throughput",
+        "memory",
+        "cpu",
+        "optimization",
+        "n+1",
+        "caching",
     ],
     IssueCategory.ARCHITECTURE: [
-        "architecture", "design", "pattern", "coupling", "cohesion",
-        "module", "component", "service", "api", "interface",
+        "architecture",
+        "design",
+        "pattern",
+        "coupling",
+        "cohesion",
+        "module",
+        "component",
+        "service",
+        "api",
+        "interface",
     ],
     IssueCategory.TESTING: [
-        "test", "coverage", "unit", "integration", "e2e", "mock", "assertion",
+        "test",
+        "coverage",
+        "unit",
+        "integration",
+        "e2e",
+        "mock",
+        "assertion",
     ],
     IssueCategory.DOCUMENTATION: [
-        "documentation", "comment", "readme", "docstring", "example",
+        "documentation",
+        "comment",
+        "readme",
+        "docstring",
+        "example",
     ],
     IssueCategory.EDGE_CASE: [
-        "edge case", "boundary", "null", "empty", "undefined", "corner case",
+        "edge case",
+        "boundary",
+        "null",
+        "empty",
+        "undefined",
+        "corner case",
     ],
     IssueCategory.UI_UX: [
-        "ui", "ux", "user interface", "accessibility", "responsive", "design",
+        "ui",
+        "ux",
+        "user interface",
+        "accessibility",
+        "responsive",
+        "design",
     ],
 }
 
@@ -410,10 +475,11 @@ class ResultAggregator:
                 r.completed_at for r in report.raw_results.values() if r.completed_at
             ]
             if completed_times:
-                report.completed_at = max(completed_times)
+                max_completed = max(completed_times)
+                report.completed_at = max_completed
                 if report.started_at:
                     report.total_duration_seconds = (
-                        report.completed_at - report.started_at
+                        max_completed - report.started_at
                     ).total_seconds()
 
         logger.info(
@@ -448,7 +514,9 @@ def format_report_markdown(report: AggregatedReport) -> str:
     lines.append(f"- **Failed:** {report.failed_roles}")
     lines.append(f"- **Skipped:** {report.skipped_roles}")
     lines.append(f"- **Success Rate:** {report.success_rate:.1f}%")
-    duration_str = f"{report.total_duration_seconds:.2f}s" if report.total_duration_seconds else "N/A"
+    duration_str = (
+        f"{report.total_duration_seconds:.2f}s" if report.total_duration_seconds else "N/A"
+    )
     lines.append(f"- **Duration:** {duration_str}")
     lines.append("")
 
@@ -503,4 +571,5 @@ def format_report_markdown(report: AggregatedReport) -> str:
 def format_report_json(report: AggregatedReport) -> str:
     """Format an aggregated report as JSON string."""
     import json
+
     return json.dumps(report.to_dict(), indent=2, default=str)

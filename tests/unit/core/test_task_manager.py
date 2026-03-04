@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 
 from sdd_server.core.task_manager import TaskBreakdownManager
-from sdd_server.models.task import Task, TaskBreakdown, TaskPriority, TaskStatus
+from sdd_server.models.task import TaskBreakdown, TaskPriority, TaskStatus
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def temp_project(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def manager(temp_project: Path) -> Generator[TaskBreakdownManager, None, None]:
+def manager(temp_project: Path) -> Generator[TaskBreakdownManager]:
     """Create a TaskBreakdownManager instance."""
     mgr = TaskBreakdownManager(temp_project)
     yield mgr
@@ -73,7 +73,7 @@ class TestBreakdownCRUD:
 
     def test_get_breakdown(self, manager: TaskBreakdownManager) -> None:
         """Test getting a breakdown."""
-        created = manager.create_breakdown("auth")
+        manager.create_breakdown("auth")
         retrieved = manager.get_breakdown("auth")
 
         assert retrieved is not None
@@ -349,7 +349,9 @@ class TestParsingAndSync:
         # feature_dir returns specs_dir / feature_name (not specs/features/feature_name)
         tasks_md = temp_project / "specs" / "auth" / "tasks.md"
         tasks_md.parent.mkdir(parents=True, exist_ok=True)
-        tasks_md.write_text("- [ ] Implement login #t1000001\n- [x] Design API #t1000002\n- [ ] Write tests\n")
+        tasks_md.write_text(
+            "- [ ] Implement login #t1000001\n- [x] Design API #t1000002\n- [ ] Write tests\n"
+        )
 
         tasks = manager.parse_tasks_from_spec("auth")
 
@@ -377,7 +379,9 @@ class TestParsingAndSync:
         assert breakdown is not None
         assert len(breakdown.tasks) == 2
 
-    def test_sync_from_spec_updates_status(self, manager: TaskBreakdownManager, temp_project: Path) -> None:
+    def test_sync_from_spec_updates_status(
+        self, manager: TaskBreakdownManager, temp_project: Path
+    ) -> None:
         """Test that sync updates existing task status."""
         tasks_md = temp_project / "specs" / "auth" / "tasks.md"
         tasks_md.parent.mkdir(parents=True, exist_ok=True)

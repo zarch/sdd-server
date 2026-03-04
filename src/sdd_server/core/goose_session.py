@@ -212,16 +212,14 @@ class GooseSession:
                 env=self._build_env(),
             )
         except FileNotFoundError as e:
-            raise GooseNotFoundError(
-                f"Goose CLI not found at {self._config.goose_path}"
-            ) from e
+            raise GooseNotFoundError(f"Goose CLI not found at {self._config.goose_path}") from e
 
         try:
             stdout_bytes, stderr_bytes = await asyncio.wait_for(
                 self._process.communicate(),
                 timeout=self._config.timeout_seconds,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._process.kill()
             await self._process.wait()
             raise
@@ -344,7 +342,7 @@ class GooseSession:
 
             return result
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             completed_at = datetime.now()
             duration = (completed_at - started_at).total_seconds()
 

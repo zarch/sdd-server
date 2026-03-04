@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 from sdd_server.models.base import SDDBaseModel
 
 
-class CodeTemplateType(str, Enum):
+class CodeTemplateType(StrEnum):
     """Types of code templates available for generation."""
 
     MODULE = "module"  # Python module scaffold

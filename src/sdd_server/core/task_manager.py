@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 from sdd_server.infrastructure.filesystem import FileSystemClient
-from sdd_server.models.spec import SpecType
 from sdd_server.models.task import (
     Task,
     TaskBreakdown,
@@ -275,7 +274,16 @@ class TaskBreakdownManager:
             return None
 
         # Update allowed fields
-        for field in ("title", "description", "priority", "role", "dependencies", "tags", "ai_prompt", "metadata"):
+        for field in (
+            "title",
+            "description",
+            "priority",
+            "role",
+            "dependencies",
+            "tags",
+            "ai_prompt",
+            "metadata",
+        ):
             if field in updates:
                 setattr(task, field, updates[field])
 
