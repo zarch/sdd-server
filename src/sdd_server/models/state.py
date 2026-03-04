@@ -10,7 +10,7 @@ from sdd_server.models.base import SDDBaseModel
 
 
 class WorkflowState(StrEnum):
-    """Feature workflow states."""
+    """Feature workflow states (PRD §E1)."""
 
     UNINITIALIZED = "uninitialized"
     INITIALIZING = "initializing"
@@ -54,6 +54,7 @@ class StateHistory(SDDBaseModel):
     to_state: WorkflowState
     timestamp: datetime
     reason: str | None = None
+    actor: str | None = None
 
 
 class BypassRecord(SDDBaseModel):
@@ -72,8 +73,14 @@ class FeatureState(SDDBaseModel):
     feature_id: str
     state: WorkflowState = WorkflowState.UNINITIALIZED
     history: list[StateHistory] = []  # noqa: RUF012
+    metadata: dict[str, Any] = {}  # noqa: RUF012
 
-    def transition_to(self, new_state: WorkflowState, reason: str | None = None) -> None:
+    def transition_to(
+        self,
+        new_state: WorkflowState,
+        reason: str | None = None,
+        actor: str | None = None,
+    ) -> None:
         """Transition to a new state, raising ValueError for invalid transitions."""
         allowed = _TRANSITIONS.get(self.state, set())
         if new_state not in allowed:
@@ -88,6 +95,7 @@ class FeatureState(SDDBaseModel):
                 to_state=new_state,
                 timestamp=datetime.now(UTC),
                 reason=reason,
+                actor=actor,
             )
         )
         self.state = new_state
@@ -95,6 +103,21 @@ class FeatureState(SDDBaseModel):
     def can_transition_to(self, new_state: WorkflowState) -> bool:
         """Check whether a transition is valid without performing it."""
         return new_state in _TRANSITIONS.get(self.state, set())
+
+    def get_rework_count(self) -> int:
+        """Count transitions that moved backwards (e.g. reviewing → implementing)."""
+        backwards = {
+            (WorkflowState.REVIEWING, WorkflowState.IMPLEMENTING),
+            (WorkflowState.IMPLEMENTING, WorkflowState.READY),
+            (WorkflowState.SPEC_REVIEW, WorkflowState.INITIALIZING),
+        }
+        return sum(1 for h in self.history if (h.from_state, h.to_state) in backwards)
+
+    def time_in_current_state(self) -> float | None:
+        """Seconds spent in the current state, or None if no history."""
+        if not self.history:
+            return None
+        return (datetime.now(UTC) - self.history[-1].timestamp).total_seconds()
 
 
 class ProjectState(SDDBaseModel):

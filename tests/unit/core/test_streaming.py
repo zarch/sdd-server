@@ -4,8 +4,6 @@ import asyncio
 import json
 from typing import ClassVar
 
-import pytest
-
 from sdd_server.core.streaming import (
     EventEmitter,
     EventType,
@@ -84,7 +82,6 @@ class TestEventEmitter:
         emitter = EventEmitter()
         assert len(emitter._subscribers) == 0  # Actually starts with 0
 
-    @pytest.mark.asyncio
     async def test_subscribe_unsubscribe(self) -> None:
         """Test subscribe and unsubscribe."""
         emitter = EventEmitter()
@@ -94,7 +91,6 @@ class TestEventEmitter:
 
         await emitter.unsubscribe(queue)
 
-    @pytest.mark.asyncio
     async def test_emit_event(self) -> None:
         """Test emitting events."""
         emitter = EventEmitter()
@@ -109,7 +105,6 @@ class TestEventEmitter:
 
         await emitter.unsubscribe(queue)
 
-    @pytest.mark.asyncio
     async def test_multiple_subscribers(self) -> None:
         """Test multiple subscribers receive events."""
         emitter = EventEmitter()
@@ -216,7 +211,6 @@ class TestEventFactory:
 class TestCallbackFactories:
     """Tests for callback factory functions."""
 
-    @pytest.mark.asyncio
     async def test_create_progress_callback(self) -> None:
         """Test progress callback creation."""
         emitter = EventEmitter()
@@ -243,7 +237,6 @@ class TestCallbackFactories:
 
         await emitter.unsubscribe(queue)
 
-    @pytest.mark.asyncio
     async def test_create_result_callback(self) -> None:
         """Test result callback creation."""
         emitter = EventEmitter()
@@ -277,7 +270,6 @@ class TestCallbackFactories:
 class TestEventStreams:
     """Tests for event stream generators."""
 
-    @pytest.mark.asyncio
     async def test_sse_event_stream(self) -> None:
         """Test SSE event stream generator."""
         emitter = EventEmitter()
@@ -295,7 +287,6 @@ class TestEventStreams:
         assert len(sse_lines) >= 1
         assert any("event:" in line for line in sse_lines)
 
-    @pytest.mark.asyncio
     async def test_json_event_stream(self) -> None:
         """Test JSON event stream generator."""
         emitter = EventEmitter()
@@ -317,7 +308,6 @@ class TestEventStreams:
             data = json.loads(line)
             assert "event" in data
 
-    @pytest.mark.asyncio
     async def test_stream_completion_break(self) -> None:
         """Test that streams break on completion events."""
         emitter = EventEmitter()
@@ -338,7 +328,6 @@ class TestEventStreams:
         # Should have received at least one event and then stopped
         assert len(events) >= 1
 
-    @pytest.mark.asyncio
     async def test_stream_timeout_keepalive(self) -> None:
         """Test that stream sends keepalive on timeout."""
         emitter = EventEmitter()
@@ -346,9 +335,10 @@ class TestEventStreams:
 
         keepalive_received = False
 
+        # event_stream runs indefinitely (SSE design); break after first keepalive
         async for line in event_stream(queue, timeout_seconds=0.1):
             if "keepalive" in line:
                 keepalive_received = True
+                break  # stop consuming — generator keeps going but we're done
 
-        # Should have received keepalive since no events were sent
         assert keepalive_received

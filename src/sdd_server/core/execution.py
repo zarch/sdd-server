@@ -277,12 +277,12 @@ class ExecutionPipeline:
             return filtered
 
         if self._config.exclude_stages:
-            filtered: list[str] = []
+            filtered_results: list[str] = []
             for name in all_roles:
                 role = self._registry.get_role(name)
                 if role and role.metadata.stage not in self._config.exclude_stages:
-                    filtered.append(name)
-            return filtered
+                    filtered_results.append(name)
+            return filtered_results
 
         return list(all_roles)
 
@@ -468,7 +468,8 @@ class ExecutionPipeline:
     ) -> RoleResult:
         """Execute a role plugin."""
         await role.initialize(self._context)
-        return await role.review(scope=scope, target=target)
+        result: RoleResult = await role.review(scope=scope, target=target)
+        return result
 
     def _skip_remaining(
         self,

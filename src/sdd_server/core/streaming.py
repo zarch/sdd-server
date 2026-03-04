@@ -101,7 +101,7 @@ class EventEmitter:
         self._max_queue_size = max_queue_size
         self._lock = asyncio.Lock()
 
-    async def subscribe(self) -> "asyncio.Queue[ProgressEvent]":
+    async def subscribe(self) -> asyncio.Queue[ProgressEvent]:
         """Subscribe to events.
 
         Returns:
@@ -113,7 +113,7 @@ class EventEmitter:
         logger.debug("New subscriber added", total=len(self._subscribers))
         return queue
 
-    async def unsubscribe(self, queue: "asyncio.Queue[ProgressEvent]") -> None:
+    async def unsubscribe(self, queue: asyncio.Queue[ProgressEvent]) -> None:
         """Unsubscribe from events.
 
         Args:
@@ -141,7 +141,7 @@ class EventEmitter:
             try:
                 queue.put_nowait(event)
             except asyncio.QueueFull:
-                logger.warning("Dropped event for slow subscriber", event=event.event_type)
+                logger.warning("Dropped event for slow subscriber", event=event.event_type)  # type: ignore[misc]  # structlog structured logging
 
         logger.debug(
             "Event emitted",
@@ -184,7 +184,7 @@ class EventEmitter:
 
 
 async def event_stream(
-    queue: "asyncio.Queue[ProgressEvent]",
+    queue: asyncio.Queue[ProgressEvent],
     timeout_seconds: float | None = None,
 ) -> AsyncIterator[str]:
     """Generate SSE stream from event queue.
@@ -221,7 +221,7 @@ async def event_stream(
 
 
 async def json_event_stream(
-    queue: "asyncio.Queue[ProgressEvent]",
+    queue: asyncio.Queue[ProgressEvent],
     timeout_seconds: float | None = None,
 ) -> AsyncIterator[str]:
     """Generate JSON stream from event queue.

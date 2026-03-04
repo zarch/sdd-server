@@ -47,7 +47,7 @@ def test_create_feature(spec_manager: SpecManager, tmp_project: Path) -> None:
 
 def test_create_feature_invalid_name(spec_manager: SpecManager, tmp_project: Path) -> None:
     (tmp_project / "specs").mkdir(exist_ok=True)
-    with pytest.raises(ValidationError, match="Invalid feature name"):
+    with pytest.raises(ValidationError, match="lowercase alphanumeric"):
         spec_manager.create_feature("My Feature!")
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
 
@@ -124,7 +125,7 @@ def register_tools(server: FastMCP) -> None:
         description="Validate a single spec file against validation rules",
     )
     async def validate_spec(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         spec_type: str,
         feature: str | None = None,
     ) -> str:
@@ -152,7 +153,7 @@ def register_tools(server: FastMCP) -> None:
         description="Validate all spec files for a feature",
     )
     async def validate_feature(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         feature: str,
     ) -> str:
         """Validate all spec files for a feature.
@@ -182,7 +183,7 @@ def register_tools(server: FastMCP) -> None:
         description="Validate all specs in the project (root and features)",
     )
     async def validate_project(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         include_features: bool = True,
     ) -> str:
         """Validate all specs in the project.
@@ -202,7 +203,7 @@ def register_tools(server: FastMCP) -> None:
         description="List all available validation rules",
     )
     async def list_validation_rules(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         spec_type: str | None = None,
     ) -> str:
         """List validation rules, optionally filtered by spec type.
@@ -234,8 +235,8 @@ def register_tools(server: FastMCP) -> None:
             for st in rule.spec_types:
                 by_spec[st.value].append(rule)
 
-        for st, st_rules in sorted(by_spec.items()):
-            lines.append(f"## {st.upper()}")
+        for st_key, st_rules in sorted(by_spec.items()):
+            lines.append(f"## {st_key.upper()}")
             lines.append("")
             for rule in st_rules:
                 icon = _format_severity_icon(rule.severity)
@@ -256,7 +257,7 @@ def register_tools(server: FastMCP) -> None:
         description="Add a custom validation rule",
     )
     async def add_validation_rule(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         rule_id: str,
         name: str,
         description: str,

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import inspect
 import random
 import time
 from collections.abc import Callable
@@ -109,7 +110,7 @@ class RetryResult:
         return max(0, self.attempts - 1)
 
 
-class RetryExhaustedError(ExecutionError):  # type: ignore[misc]
+class RetryExhaustedError(ExecutionError):
     """Raised when all retry attempts have been exhausted."""
 
     def __init__(
@@ -333,7 +334,7 @@ def retry_on_exception(
     )
 
     def decorator(func: F) -> F:
-        if asyncio.iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
             # Async function
             @functools.wraps(func)
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -507,6 +508,7 @@ class RetryContext:
 
         delay = self.config.get_delay(self._attempt - 1)
         time.sleep(delay)
+        self._attempt += 1
 
     def __enter__(self) -> RetryContext:
         self._attempt += 1
@@ -602,6 +604,7 @@ class AsyncRetryContext:
 
         delay = self.config.get_delay(self._attempt - 1)
         await asyncio.sleep(delay)
+        self._attempt += 1
 
     async def __aenter__(self) -> AsyncRetryContext:
         self._attempt += 1

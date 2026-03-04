@@ -58,3 +58,18 @@ class GitClient:
         """Return the git user.name config value."""
         result = self._run(["config", "user.name"], check=False)
         return result.stdout.strip() if result.returncode == 0 else "unknown"
+
+    def get_diff(self, paths: list[str] | None = None) -> str:
+        """Return the git diff (staged + unstaged) for the working tree.
+
+        Args:
+            paths: Optional list of file paths to restrict the diff to.
+
+        Returns:
+            Diff string, or empty string if repository is clean.
+        """
+        args = ["diff", "HEAD"]
+        if paths:
+            args += ["--", *paths]
+        result = self._run(args, check=False)
+        return result.stdout if result.returncode == 0 else ""

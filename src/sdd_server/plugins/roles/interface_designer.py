@@ -21,7 +21,7 @@ from sdd_server.plugins.base import (
 )
 
 
-class InterfaceDesignerRole(RolePlugin):  # type: ignore[misc]
+class InterfaceDesignerRole(RolePlugin):
     """Interface Designer role plugin.
 
     The Interface Designer focuses on defining interfaces between components,

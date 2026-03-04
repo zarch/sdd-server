@@ -40,7 +40,7 @@ def _get_registry() -> PluginRegistry:
     if _registry is None:
         _registry = PluginRegistry()
         for role_class in BUILTIN_ROLES:
-            role = role_class()
+            role = role_class()  # type: ignore[abstract]
             _registry.register(role.metadata.name, role)
         logger.info("Initialized plugin registry", roles=_registry.list_roles())
     return _registry
@@ -90,7 +90,9 @@ def register_tools(mcp: FastMCP) -> None:
                         "name": role.metadata.name,
                         "version": role.metadata.version,
                         "description": role.metadata.description,
-                        "stage": role.metadata.stage.value,
+                        "stage": role.metadata.stage.value
+                        if role.metadata.stage is not None
+                        else "",
                         "dependencies": role.metadata.dependencies,
                         "priority": role.metadata.priority,
                     }

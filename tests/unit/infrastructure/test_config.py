@@ -359,6 +359,14 @@ class TestEnvironmentVariables:
 class TestGetConfig:
     """Tests for get_config function."""
 
+    def setup_method(self) -> None:
+        """Clear lru_cache before each test to avoid cross-test contamination."""
+        get_config.cache_clear()
+
+    def teardown_method(self) -> None:
+        """Clear lru_cache after each test."""
+        get_config.cache_clear()
+
     def test_get_config_returns_sdd_config(self) -> None:
         """Test that get_config returns SDDConfig instance."""
         config = get_config()
@@ -371,13 +379,64 @@ class TestGetConfig:
         assert config1 is config2
 
     def test_reload_config(self) -> None:
-        """Test that reload_config clears cache."""
-        get_config()
-        reload_config()
+        """Test that reload_config clears cache and returns fresh instance."""
+        config1 = get_config()
+        reloaded = reload_config()
+        assert isinstance(reloaded, SDDConfig)
+        # After reload the cache is populated with a new call
         config2 = get_config()
-        # After reload, should be a new instance (cache cleared)
-        # Note: Due to lru_cache, this tests the function behavior
         assert isinstance(config2, SDDConfig)
+        # The reloaded config should not be the same cached object as before reload
+        assert config1 is not reloaded
+
+    def test_get_config_uses_file_when_present(self, tmp_path: Path) -> None:
+        """Test that get_config reads file config when the config file exists."""
+        import sdd_server.infrastructure.config as config_module
+
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("environment: production\n")
+
+        original = config_module.DEFAULT_CONFIG_FILE
+        try:
+            config_module.DEFAULT_CONFIG_FILE = config_file
+            get_config.cache_clear()
+            config = get_config()
+            assert config.environment.value == "production"
+        finally:
+            config_module.DEFAULT_CONFIG_FILE = original
+            get_config.cache_clear()
+
+    def test_get_config_falls_back_to_env_when_no_file(self, tmp_path: Path) -> None:
+        """Test that get_config returns env config when no file exists."""
+        import sdd_server.infrastructure.config as config_module
+
+        original = config_module.DEFAULT_CONFIG_FILE
+        try:
+            config_module.DEFAULT_CONFIG_FILE = tmp_path / "nonexistent.yaml"
+            get_config.cache_clear()
+            config = get_config()
+            assert isinstance(config, SDDConfig)
+        finally:
+            config_module.DEFAULT_CONFIG_FILE = original
+            get_config.cache_clear()
+
+    def test_get_config_falls_back_on_invalid_file(self, tmp_path: Path) -> None:
+        """Test that get_config falls back to env config when file is malformed."""
+        import sdd_server.infrastructure.config as config_module
+
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("not: valid: yaml: [[[")
+
+        original = config_module.DEFAULT_CONFIG_FILE
+        try:
+            config_module.DEFAULT_CONFIG_FILE = config_file
+            get_config.cache_clear()
+            config = get_config()
+            # Should fall back gracefully
+            assert isinstance(config, SDDConfig)
+        finally:
+            config_module.DEFAULT_CONFIG_FILE = original
+            get_config.cache_clear()
 
 
 class TestNestedSettings:

@@ -6,11 +6,12 @@ from mcp.server.fastmcp import Context, FastMCP
 
 from sdd_server.core.spec_manager import SpecManager
 from sdd_server.infrastructure.exceptions import ValidationError
+from sdd_server.mcp.server import LifespanContext
 
 
 def _get_spec_manager(ctx: Context | None) -> SpecManager:  # type: ignore[type-arg]
     if ctx and hasattr(ctx, "request_context") and ctx.request_context:
-        state = ctx.request_context.lifespan_context
+        state: LifespanContext = ctx.request_context.lifespan_context
         return state["spec_manager"]
     import os
     from pathlib import Path
@@ -28,7 +29,7 @@ def register_tools(mcp: FastMCP) -> None:
         description: str = "",
         ctx: Context | None = None,  # type: ignore[type-arg]
     ) -> dict[str, object]:
-        """Create a new feature subdirectory under specs/features/<name>.
+        """Create a new feature subdirectory under specs/<name>.
 
         Args:
             name: Feature name (lowercase, hyphens allowed).

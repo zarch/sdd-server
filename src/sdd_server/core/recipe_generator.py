@@ -289,7 +289,7 @@ class RecipeGenerator:
         context["role_name"] = role.metadata.name
         context["role_version"] = role.metadata.version
         context["role_description"] = role.metadata.description
-        context["role_stage"] = role.metadata.stage.value
+        context["role_stage"] = role.metadata.stage.value if role.metadata.stage is not None else ""
         context["role_priority"] = role.metadata.priority
         context["role_dependencies"] = role.metadata.dependencies
 

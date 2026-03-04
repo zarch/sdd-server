@@ -7,13 +7,14 @@ from pathlib import Path
 from mcp.server.fastmcp import Context, FastMCP
 
 from sdd_server.core.spec_manager import SpecManager
-from sdd_server.infrastructure.exceptions import SpecNotFoundError
+from sdd_server.infrastructure.exceptions import SDDError, SpecNotFoundError
+from sdd_server.mcp.server import LifespanContext
 from sdd_server.models.spec import SpecType
 
 
 def _get_spec_manager(ctx: Context | None) -> SpecManager:  # type: ignore[type-arg]
     if ctx and hasattr(ctx, "request_context") and ctx.request_context:
-        state = ctx.request_context.lifespan_context
+        state: LifespanContext = ctx.request_context.lifespan_context
         return state["spec_manager"]
     import os
 
@@ -77,7 +78,7 @@ def register_tools(mcp: FastMCP) -> None:
         try:
             mgr.write_spec(stype, content, feature or None, mode)
             return {"success": True, "spec_type": spec_type, "feature": feature, "mode": mode}
-        except Exception as exc:
+        except SDDError as exc:
             return {"error": str(exc)}
 
     @mcp.tool()

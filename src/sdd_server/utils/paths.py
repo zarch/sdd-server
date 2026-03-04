@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from sdd_server.models.spec import SpecType
+
 
 class SpecsPaths:
     """Centralizes all path calculations for the specs directory layout."""
@@ -59,10 +61,8 @@ class SpecsPaths:
         """Return the path for a Goose YAML recipe file (recipes/<role>.yaml)."""
         return self.recipes_dir / f"{role}.yaml"
 
-    def root_spec_path(self, spec_type) -> Path:
+    def root_spec_path(self, spec_type: SpecType) -> Path:
         """Return the path for a root spec file by type."""
-        from sdd_server.models.spec import SpecType
-
         spec_map = {
             SpecType.PRD: self.prd_path,
             SpecType.ARCH: self.arch_path,
@@ -71,10 +71,8 @@ class SpecsPaths:
         }
         return spec_map[spec_type]
 
-    def feature_spec_path(self, feature: str, spec_type) -> Path:
+    def feature_spec_path(self, feature: str, spec_type: SpecType) -> Path:
         """Return the path for a feature spec file by type."""
-        from sdd_server.models.spec import SpecType
-
         spec_map = {
             SpecType.PRD: self.feature_prd(feature),
             SpecType.ARCH: self.feature_arch(feature),

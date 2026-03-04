@@ -6,12 +6,13 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import TypedDict
 
 from mcp.server.fastmcp import FastMCP
 
+from sdd_server.core.ai_client import AIClientBridge, create_ai_client
 from sdd_server.core.code_generator import CodeGenerator
 from sdd_server.core.custom_plugin_manager import CustomPluginManager
-from sdd_server.core.lifecycle import FeatureLifecycleManager
 from sdd_server.core.metadata import MetadataManager
 from sdd_server.core.spec_manager import SpecManager
 from sdd_server.core.spec_validator import SpecValidator
@@ -23,8 +24,22 @@ from sdd_server.utils.logging import configure_logging, get_logger
 logger = get_logger(__name__)
 
 
+class LifespanContext(TypedDict):
+    """Typed context dict yielded by the MCP server lifespan."""
+
+    project_root: Path
+    spec_manager: SpecManager
+    metadata: MetadataManager
+    git_client: GitClient
+    task_manager: TaskBreakdownManager
+    code_generator: CodeGenerator
+    spec_validator: SpecValidator
+    custom_plugin_manager: CustomPluginManager
+    ai_client: AIClientBridge
+
+
 @asynccontextmanager
-async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
+async def lifespan(server: FastMCP) -> AsyncIterator[LifespanContext]:
     """Set up server context on startup; validate environment."""
     configure_logging(level=os.getenv("SDD_LOG_LEVEL", "INFO"))
 
@@ -36,8 +51,7 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
     spec_manager = SpecManager(project_root, specs_dir)
     metadata = MetadataManager(project_root, specs_dir)
     git_client = GitClient(project_root)
-    lifecycle_manager = FeatureLifecycleManager(project_root)
-    task_manager = TaskBreakdownManager(project_root)
+    task_manager = TaskBreakdownManager(project_root, specs_dir)
     code_generator = CodeGenerator(project_root, specs_dir)
     spec_validator = SpecValidator(project_root, specs_dir)
     custom_plugin_manager = CustomPluginManager(project_root, specs_dir)
@@ -45,18 +59,22 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
     # Load custom plugins from directory
     custom_plugin_manager.load_from_directory()
 
-    # Sync lifecycle with existing features
-    features = spec_manager.list_features()
-    if features:
-        added = lifecycle_manager.sync_with_spec_manager(features)
-        if added > 0:
-            logger.info("synced_features", count=added)
+    # AI client (Goose by default; non-fatal if unavailable)
+    ai_client_type = os.getenv("SDD_AI_CLIENT", "goose")
+    ai_timeout = float(os.getenv("SDD_AI_TIMEOUT", "300"))
+    try:
+        ai_client = create_ai_client(ai_client_type, project_root, timeout=ai_timeout)
+        ok, msg = await ai_client.check_compatibility()
+        if ok:
+            logger.info("ai_client_ready", client=ai_client_type, info=msg)
+        else:
+            logger.warning("ai_client_unavailable", client=ai_client_type, reason=msg)
+    except Exception as exc:
+        logger.warning("ai_client_init_failed", client=ai_client_type, error=str(exc))
+        # Fall back to a GooseClientBridge that will gracefully report unavailability
+        from sdd_server.core.ai_client import GooseClientBridge
 
-    # Sync tasks from existing spec files
-    sync_results = task_manager.sync_all_specs()
-    total_changes = sum(sync_results.values())
-    if total_changes > 0:
-        logger.info("synced_tasks", changes=total_changes)
+        ai_client = GooseClientBridge(project_root=project_root)
 
     # Run startup validation (non-blocking: log warnings, raise on fatal)
     validator = StartupValidator(project_root, specs_dir)
@@ -74,11 +92,11 @@ async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, object]]:
         "spec_manager": spec_manager,
         "metadata": metadata,
         "git_client": git_client,
-        "lifecycle_manager": lifecycle_manager,
         "task_manager": task_manager,
         "code_generator": code_generator,
         "spec_validator": spec_validator,
         "custom_plugin_manager": custom_plugin_manager,
+        "ai_client": ai_client,
     }
 
     logger.info("sdd_server_stopped")
@@ -92,11 +110,11 @@ def create_server() -> FastMCP:
     # These imports must happen after server is created
     from sdd_server.mcp.prompts.review import register_prompts as reg_prompts
     from sdd_server.mcp.resources.specs import register_resources
+    from sdd_server.mcp.tools.align import register_tools as reg_align
     from sdd_server.mcp.tools.codegen import register_tools as reg_codegen
     from sdd_server.mcp.tools.custom_plugins import register_tools as reg_custom_plugins
     from sdd_server.mcp.tools.feature import register_tools as reg_feature
     from sdd_server.mcp.tools.init import register_tools as reg_init
-    from sdd_server.mcp.tools.lifecycle import register_tools as reg_lifecycle
     from sdd_server.mcp.tools.review import register_tools as reg_review
     from sdd_server.mcp.tools.spec import register_tools as reg_spec
     from sdd_server.mcp.tools.status import register_tools as reg_status
@@ -108,11 +126,11 @@ def create_server() -> FastMCP:
     reg_feature(server)
     reg_status(server)
     reg_review(server)
-    reg_lifecycle(server)
     reg_task(server)
     reg_codegen(server)
     reg_validation(server)
     reg_custom_plugins(server)
+    reg_align(server)
     reg_prompts(server)
     register_resources(server)
 

@@ -41,7 +41,7 @@ dev = [
 ]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 line-length = 100
 
 [tool.ruff.lint]
@@ -53,8 +53,9 @@ python_version = "3.14"
 strict = true
 ignore_missing_imports = true
 explicit_package_bases = true
+disable_error_code = ["import-untyped"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "--tb=short"
+addopts = "--tb=short --cov=sdd_server --cov-report=term-missing --cov-fail-under=80"

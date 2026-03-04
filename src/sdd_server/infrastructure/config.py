@@ -551,26 +551,23 @@ class SDDConfig:
 def get_config() -> SDDConfig:
     """Get the global configuration instance.
 
-    Configuration is loaded from:
-    1. Environment variables (highest priority)
-    2. Configuration file at DEFAULT_CONFIG_FILE (if exists)
-    3. Default values (lowest priority)
-    """
-    SDDConfig()
+    Configuration is loaded from (highest priority wins):
+    1. Configuration file at DEFAULT_CONFIG_FILE (if exists)
+    2. Environment variables
+    3. Default values
 
-    # Try to load from file first
+    Note: full env-over-file merging is a TODO — currently env config is used when
+    no config file is present, and file config is used when the file exists.
+    """
     if DEFAULT_CONFIG_FILE.exists():
         try:
-            SDDConfig.from_file(DEFAULT_CONFIG_FILE)
+            config = SDDConfig.from_file(DEFAULT_CONFIG_FILE)
             logger.debug(f"Loaded configuration from {DEFAULT_CONFIG_FILE}")
+            return config
         except Exception as e:
-            logger.warning(f"Failed to load config file: {e}")
+            logger.warning(f"Failed to load config file, using env defaults: {e}")
 
-    # Merge environment variables (highest priority)
-    env_config = SDDConfig.from_env()
-
-    # Return env config (env has highest priority)
-    return env_config
+    return SDDConfig.from_env()
 
 
 def reload_config() -> SDDConfig:

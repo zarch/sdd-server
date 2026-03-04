@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -85,7 +85,7 @@ class ErrorContext:
     """Context information for error tracking and debugging."""
 
     correlation_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
-    timestamp: datetime = field(default_factory=datetime.now)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     operation: str | None = None
     details: dict[str, Any] = field(default_factory=dict)
     suggestions: list[str] = field(default_factory=list)

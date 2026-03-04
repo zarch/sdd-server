@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 if TYPE_CHECKING:
     pass
 
-from sdd_server.infrastructure.exceptions import ErrorCode, ExecutionError
+from sdd_server.infrastructure.exceptions import ErrorCode, ErrorContext, ExecutionError
 from sdd_server.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -27,7 +27,7 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
-class RateLimitExceeded(ExecutionError):  # type: ignore[misc]
+class RateLimitExceeded(ExecutionError):
     """Raised when rate limit is exceeded."""
 
     def __init__(
@@ -56,7 +56,7 @@ class RateLimitExceeded(ExecutionError):  # type: ignore[misc]
         super().__init__(
             message,
             code=ErrorCode.EXEC_TIMEOUT,  # Reuse existing error code
-            context=details,
+            context=ErrorContext(details=details),
         )
         self.retry_after = retry_after
         self.limit = limit

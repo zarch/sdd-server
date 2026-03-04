@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -86,7 +87,7 @@ class StartupValidator:
     def _check_specs_dir(self) -> CheckResult:
         specs = self._paths.specs_dir
         exists = specs.is_dir()
-        writable = exists and specs.stat().st_mode & 0o200
+        writable = exists and os.access(specs, os.W_OK)
         ok = exists and bool(writable)
         return CheckResult(
             name="specs_dir",
@@ -101,13 +102,16 @@ class StartupValidator:
 
     def _check_recipes_dir(self) -> CheckResult:
         recipes = self._paths.recipes_dir
-        if not recipes.is_dir():
-            recipes.mkdir(parents=True, exist_ok=True)
+        exists = recipes.is_dir()
         return CheckResult(
             name="recipes_dir",
-            passed=True,
+            passed=True,  # non-fatal: recipes/ is created on sdd init
             fatal=False,
-            message=f"recipes/ directory ready at '{recipes}'",
+            message=(
+                f"recipes/ directory found at '{recipes}'"
+                if exists
+                else f"recipes/ directory absent at '{recipes}' — run 'sdd init' to create it"
+            ),
         )
 
     def _check_git_repo(self) -> CheckResult:

@@ -21,7 +21,7 @@ from sdd_server.plugins.base import (
 )
 
 
-class ArchitectRole(RolePlugin):  # type: ignore[misc]
+class ArchitectRole(RolePlugin):
     """Architect role plugin for system architecture design.
 
     The Architect is the first role to run in the workflow and has no

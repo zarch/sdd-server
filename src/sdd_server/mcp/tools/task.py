@@ -50,23 +50,15 @@ async def sdd_task_add(
         ai_prompt: AI prompt for task execution.
 
     Returns:
-        Created task details.
+        Not supported message — tasks are managed via tasks.md directly.
     """
-    manager = _get_manager(ctx)
-
-    priority_enum = TaskPriority(priority.lower())
-    task = manager.add_task(
-        title=title,
-        description=description,
-        feature=feature,
-        priority=priority_enum,
-        role=role,
-        dependencies=dependencies,
-        tags=tags,
-        ai_prompt=ai_prompt,
-    )
-
-    return task.model_dump()
+    return {
+        "status": "not_supported",
+        "message": (
+            "Adding tasks programmatically is not supported. "
+            "Tasks are managed by editing tasks.md directly."
+        ),
+    }
 
 
 async def sdd_task_get(
@@ -107,7 +99,7 @@ async def sdd_task_update(
     dependencies: list[str] | None = None,
     tags: list[str] | None = None,
     ai_prompt: str | None = None,
-) -> dict[str, Any] | None:
+) -> dict[str, Any]:
     """Update a task.
 
     Args:
@@ -122,28 +114,16 @@ async def sdd_task_update(
         ai_prompt: New AI prompt.
 
     Returns:
-        Updated task or None if not found.
+        Not supported message — tasks are managed via tasks.md directly.
     """
-    manager = _get_manager(ctx)
-
-    updates: dict[str, Any] = {}
-    if title is not None:
-        updates["title"] = title
-    if description is not None:
-        updates["description"] = description
-    if priority is not None:
-        updates["priority"] = TaskPriority(priority.lower())
-    if role is not None:
-        updates["role"] = role
-    if dependencies is not None:
-        updates["dependencies"] = dependencies
-    if tags is not None:
-        updates["tags"] = tags
-    if ai_prompt is not None:
-        updates["ai_prompt"] = ai_prompt
-
-    task = manager.update_task(task_id, feature=feature, **updates)
-    return task.model_dump() if task else None
+    return {
+        "status": "not_supported",
+        "task_id": task_id,
+        "message": (
+            "Updating tasks programmatically is not supported. "
+            "Tasks are managed by editing tasks.md directly."
+        ),
+    }
 
 
 async def sdd_task_set_status(
@@ -152,7 +132,7 @@ async def sdd_task_set_status(
     status: str,
     feature: str | None = None,
     reason: str | None = None,
-) -> dict[str, Any] | None:
+) -> dict[str, Any]:
     """Set the status of a task.
 
     Args:
@@ -162,13 +142,16 @@ async def sdd_task_set_status(
         reason: Optional reason for status change.
 
     Returns:
-        Updated task or None if not found.
+        Not supported message — tasks are managed via tasks.md directly.
     """
-    manager = _get_manager(ctx)
-    status_enum = TaskStatus(status.lower())
-
-    task = manager.set_task_status(task_id, status_enum, feature=feature, reason=reason)
-    return task.model_dump() if task else None
+    return {
+        "status": "not_supported",
+        "task_id": task_id,
+        "message": (
+            "Setting task status programmatically is not supported. "
+            "Tasks are managed by editing tasks.md directly."
+        ),
+    }
 
 
 async def sdd_task_remove(
@@ -183,11 +166,16 @@ async def sdd_task_remove(
         feature: Feature the task belongs to.
 
     Returns:
-        Result indicating success or failure.
+        Not supported message — tasks are managed via tasks.md directly.
     """
-    manager = _get_manager(ctx)
-    removed = manager.remove_task(task_id, feature=feature)
-    return {"status": "removed" if removed else "not_found", "task_id": task_id}
+    return {
+        "status": "not_supported",
+        "task_id": task_id,
+        "message": (
+            "Removing tasks programmatically is not supported. "
+            "Tasks are managed by editing tasks.md directly."
+        ),
+    }
 
 
 async def sdd_task_list(
@@ -303,8 +291,13 @@ async def sdd_task_sync(
     manager = _get_manager(ctx)
 
     if feature is not None:
-        changes = manager.sync_from_spec(feature)
-        return {"feature": feature, "changes": changes}
+        # sync_from_spec no longer exists; fall back to syncing all specs
+        results = manager.sync_all_specs()
+        return {
+            "feature": feature,
+            "message": ("Per-feature sync is not supported; synced all specs instead."),
+            "results": {str(k): v for k, v in results.items()},
+        }
 
     results = manager.sync_all_specs()
     return {"results": {str(k): v for k, v in results.items()}}

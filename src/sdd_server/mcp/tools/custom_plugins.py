@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from mcp.server.fastmcp import Context, FastMCP
 
 from sdd_server.core.custom_plugin_manager import CustomPluginManager
@@ -48,7 +50,7 @@ def register_tools(server: FastMCP) -> None:
         description="List all custom plugins",
     )
     async def list_plugins(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         enabled_only: bool = False,
     ) -> str:
         """List all registered custom plugins.
@@ -84,7 +86,7 @@ def register_tools(server: FastMCP) -> None:
         description="Create a new custom plugin",
     )
     async def create_plugin(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         name: str,
         plugin_type: str = "role",
         description: str = "",
@@ -164,7 +166,7 @@ def register_tools(server: FastMCP) -> None:
         description="Show details of a custom plugin",
     )
     async def show_plugin(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         name: str,
     ) -> str:
         """Show details of a custom plugin.
@@ -204,7 +206,7 @@ def register_tools(server: FastMCP) -> None:
         description="Update an existing custom plugin",
     )
     async def update_plugin(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         name: str,
         description: str | None = None,
         stage: str | None = None,
@@ -287,7 +289,7 @@ def register_tools(server: FastMCP) -> None:
         description="Delete a custom plugin",
     )
     async def delete_plugin(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         name: str,
     ) -> str:
         """Delete a custom plugin.
@@ -313,7 +315,7 @@ def register_tools(server: FastMCP) -> None:
         description="Enable a custom plugin",
     )
     async def enable_plugin(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         name: str,
     ) -> str:
         """Enable a custom plugin.
@@ -342,7 +344,7 @@ def register_tools(server: FastMCP) -> None:
         description="Disable a custom plugin",
     )
     async def disable_plugin(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
         name: str,
     ) -> str:
         """Disable a custom plugin.
@@ -371,7 +373,7 @@ def register_tools(server: FastMCP) -> None:
         description="Load custom plugins from the plugins directory",
     )
     async def load_plugins(
-        ctx: Context,
+        ctx: Context[Any, Any, Any],
     ) -> str:
         """Load all custom plugins from the plugins directory.
 

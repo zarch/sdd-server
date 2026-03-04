@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import re
+import dataclasses
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -11,10 +11,15 @@ from jinja2 import Environment, PackageLoader
 from sdd_server.core.recipe_manager import ROLE_META
 from sdd_server.infrastructure.exceptions import SpecNotFoundError, ValidationError
 from sdd_server.infrastructure.filesystem import FileSystemClient
+from sdd_server.infrastructure.security.input_validation import (
+    validate_feature_name,
+    validate_spec_content,
+)
 from sdd_server.models.spec import SpecType
 from sdd_server.utils.paths import SpecsPaths
 
-_FEATURE_NAME_RE = re.compile(r"^[a-z][a-z0-9-]*$")
+# Directories inside specs/ that are not features
+_NON_FEATURE_DIRS = frozenset({"recipes"})
 
 _SPEC_FILE_MAP: dict[SpecType, str] = {
     SpecType.PRD: "prd.md",
@@ -29,6 +34,19 @@ _TEMPLATE_MAP: dict[SpecType, str] = {
     SpecType.TASKS: "tasks.md.j2",
     SpecType.CONTEXT_HINTS: "context-hints.j2",
 }
+
+
+@dataclasses.dataclass
+class SpecTemplateContext:
+    """Typed context passed to Jinja2 spec templates."""
+
+    project_name: str
+    description: str
+    date: str
+    feature: str
+    workflow_state: str
+    pending_actions: list[str]
+    roles: tuple[dict[str, str], ...]
 
 
 class SpecManager:
@@ -54,10 +72,10 @@ class SpecManager:
             return self.paths.feature_dir(feature) / filename
         return self.paths.specs_dir / filename
 
-    def _render_template(self, spec_type: SpecType, context: dict[str, object]) -> str:
+    def _render_template(self, spec_type: SpecType, context: SpecTemplateContext) -> str:
         template_name = _TEMPLATE_MAP[spec_type]
         tmpl = self._jinja.get_template(template_name)
-        return tmpl.render(**context)
+        return tmpl.render(**dataclasses.asdict(context))
 
     def _register_feature(self, name: str) -> None:
         """Add feature entry to the root tasks.md (no-op if already listed)."""
@@ -92,6 +110,7 @@ class SpecManager:
             feature: Feature subdirectory (None for root specs).
             mode: 'overwrite' | 'append' | 'prepend'
         """
+        validate_spec_content(content)
         path = self._spec_path(spec_type, feature)
         if mode == "overwrite":
             self._fs.write_file(path, content)
@@ -111,11 +130,12 @@ class SpecManager:
 
         Returns the path to the feature directory.
         """
-        if not _FEATURE_NAME_RE.match(name):
-            raise ValidationError(
-                f"Invalid feature name '{name}'. "
-                "Use lowercase letters, digits, and hyphens; must start with a letter."
-            )
+        from sdd_server.infrastructure.exceptions import InputValidationError as _IVE
+
+        try:
+            validate_feature_name(name)
+        except _IVE as exc:
+            raise ValidationError(str(exc)) from exc
 
         feature_dir = self.paths.feature_dir(name)
         if self._fs.directory_exists(feature_dir):
@@ -123,15 +143,15 @@ class SpecManager:
 
         self._fs.ensure_directory(feature_dir)
 
-        ctx = {
-            "project_name": self.project_root.name,
-            "description": description or f"Feature: {name}",
-            "date": datetime.now(UTC).strftime("%Y-%m-%d"),
-            "feature": name,
-            "workflow_state": "uninitialized",
-            "pending_actions": ["Complete PRD for this feature", "Create architecture spec"],
-            "roles": ROLE_META,
-        }
+        ctx = SpecTemplateContext(
+            project_name=self.project_root.name,
+            description=description or f"Feature: {name}",
+            date=datetime.now(UTC).strftime("%Y-%m-%d"),
+            feature=name,
+            workflow_state="uninitialized",
+            pending_actions=["Complete PRD for this feature", "Create architecture spec"],
+            roles=ROLE_META,
+        )
 
         for spec_type in (SpecType.PRD, SpecType.ARCH, SpecType.TASKS, SpecType.CONTEXT_HINTS):
             rendered = self._render_template(spec_type, ctx)
@@ -145,7 +165,11 @@ class SpecManager:
         if not self._fs.directory_exists(self.paths.specs_dir):
             return []
         items = self._fs.list_directory(self.paths.specs_dir)
-        return [p.name for p in items if p.is_dir() and not p.name.startswith(".")]
+        return [
+            p.name
+            for p in items
+            if p.is_dir() and not p.name.startswith(".") and p.name not in _NON_FEATURE_DIRS
+        ]
 
     def validate_structure(self) -> list[str]:
         """Check that all required root spec files exist.

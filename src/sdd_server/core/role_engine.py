@@ -13,8 +13,8 @@ import asyncio
 from datetime import datetime
 from typing import Any
 
+from sdd_server.infrastructure.exceptions import PluginError
 from sdd_server.plugins.base import (
-    PluginError,
     RoleResult,
     RoleStage,
     RoleStatus,

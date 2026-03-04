@@ -17,7 +17,12 @@ from typing import Any
 
 from pydantic import Field
 
-from sdd_server.infrastructure.exceptions import SDDError
+from sdd_server.infrastructure.exceptions import (
+    PluginError,
+    PluginLoadError,
+    PluginNotFoundError,
+    PluginValidationError,
+)
 from sdd_server.models.base import SDDBaseModel
 
 # Re-export for type checkers
@@ -26,6 +31,7 @@ __all__ = [
     "PluginError",
     "PluginLoadError",
     "PluginMetadata",
+    "PluginNotFoundError",
     "PluginValidationError",
     "RolePlugin",
     "RoleResult",
@@ -34,22 +40,6 @@ __all__ = [
     "validate_plugin_metadata",
     "validate_role_plugin",
 ]
-
-# =============================================================================
-# Exceptions
-# =============================================================================
-
-
-class PluginError(SDDError):  # type: ignore[misc]
-    """Base exception for plugin-related errors."""
-
-
-class PluginLoadError(PluginError):
-    """Failed to load a plugin."""
-
-
-class PluginValidationError(PluginError):
-    """Plugin validation failed."""
 
 
 # =============================================================================
@@ -88,7 +78,7 @@ class RoleStatus(StrEnum):
 # =============================================================================
 
 
-class PluginMetadata(SDDBaseModel):  # type: ignore[misc]
+class PluginMetadata(SDDBaseModel):
     """Metadata for a plugin.
 
     Attributes:
@@ -110,7 +100,7 @@ class PluginMetadata(SDDBaseModel):  # type: ignore[misc]
     dependencies: list[str] = Field(default_factory=list)
 
 
-class RoleResult(SDDBaseModel):  # type: ignore[misc]
+class RoleResult(SDDBaseModel):
     """Result from a role execution.
 
     Captures the outcome of running a role plugin, including

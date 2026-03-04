@@ -30,12 +30,13 @@ def test_specs_dir_check_present(tmp_project: Path) -> None:
     assert result.passed is True
 
 
-def test_recipes_dir_auto_created(tmp_project: Path) -> None:
+def test_recipes_dir_check_non_fatal(tmp_project: Path) -> None:
     validator = StartupValidator(tmp_project)
     result = validator._check_recipes_dir()
     assert result.passed is True
     assert result.fatal is False
-    assert (tmp_project / "specs" / "recipes").is_dir()
+    # recipes/ is NOT created as a side effect — that's 'sdd init' responsibility
+    assert not (tmp_project / "specs" / "recipes").is_dir()
 
 
 def test_git_repo_check(tmp_project: Path) -> None:

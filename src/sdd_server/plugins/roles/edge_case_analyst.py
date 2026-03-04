@@ -21,7 +21,7 @@ from sdd_server.plugins.base import (
 )
 
 
-class EdgeCaseAnalystRole(RolePlugin):  # type: ignore[misc]
+class EdgeCaseAnalystRole(RolePlugin):
     """Edge Case Analyst role plugin.
 
     The Edge Case Analyst focuses on identifying unusual scenarios and

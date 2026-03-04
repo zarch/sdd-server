@@ -21,7 +21,7 @@ from sdd_server.plugins.base import (
 )
 
 
-class UIDesignerRole(RolePlugin):  # type: ignore[misc]
+class UIDesignerRole(RolePlugin):
     """UI/UX Designer role plugin.
 
     The UI/UX Designer focuses on user-facing aspects of the system.

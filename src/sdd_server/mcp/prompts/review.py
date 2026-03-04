@@ -26,7 +26,7 @@ def _get_registry() -> PluginRegistry:
     """Get the plugin registry with builtin roles."""
     registry = PluginRegistry()
     for role_class in BUILTIN_ROLES:
-        role = role_class()
+        role = role_class()  # type: ignore[abstract]
         registry.register(role.metadata.name, role)
     return registry
 

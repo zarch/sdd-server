@@ -74,7 +74,7 @@ class RoleSummary:
     error: str | None = None
 
     @classmethod
-    def from_result(cls, result: RoleResult, max_preview: int = 200) -> "RoleSummary":
+    def from_result(cls, result: RoleResult, max_preview: int = 200) -> RoleSummary:
         """Create summary from a RoleResult."""
         return cls(
             role_name=result.role,

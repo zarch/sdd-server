@@ -21,7 +21,7 @@ from sdd_server.plugins.base import (
 )
 
 
-class SecurityAnalystRole(RolePlugin):  # type: ignore[misc]
+class SecurityAnalystRole(RolePlugin):
     """Security Analyst role plugin.
 
     The Security Analyst focuses on identifying and mitigating security

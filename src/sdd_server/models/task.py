@@ -6,7 +6,9 @@ import re
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Self
+
+from pydantic import model_validator
 
 from sdd_server.models.base import SDDBaseModel
 
@@ -53,12 +55,14 @@ class Task(SDDBaseModel):
     completed_at: datetime | None = None
     metadata: dict[str, Any] = {}  # noqa: RUF012
 
-    def __init__(self, **data: Any) -> None:
-        super().__init__(**data)
+    @model_validator(mode="after")
+    def _set_timestamps(self) -> Self:
+        now = datetime.now(UTC)
         if self.created_at is None:
-            self.created_at = datetime.now(UTC)
+            self.created_at = now
         if self.updated_at is None:
             self.updated_at = self.created_at
+        return self
 
     def mark_in_progress(self) -> None:
         """Mark task as in progress."""
@@ -98,12 +102,14 @@ class TaskBreakdown(SDDBaseModel):
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
-    def __init__(self, **data: Any) -> None:
-        super().__init__(**data)
+    @model_validator(mode="after")
+    def _set_timestamps(self) -> Self:
+        now = datetime.now(UTC)
         if self.created_at is None:
-            self.created_at = datetime.now(UTC)
+            self.created_at = now
         if self.updated_at is None:
             self.updated_at = self.created_at
+        return self
 
     def add_task(self, task: Task) -> None:
         """Add a task to the breakdown."""

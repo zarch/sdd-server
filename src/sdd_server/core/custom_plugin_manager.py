@@ -34,7 +34,7 @@ from sdd_server.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-class DynamicRolePlugin(RolePlugin):  # type: ignore[misc]
+class DynamicRolePlugin(RolePlugin):
     """A role plugin created from configuration.
 
     This class allows creating role plugins dynamically from

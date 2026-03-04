@@ -37,8 +37,13 @@ def register_tools(mcp: FastMCP) -> None:
             else Path(os.getenv("SDD_PROJECT_ROOT", ".")).resolve()
         )
 
-        git_client = GitClient(root)
-        spec_manager = SpecManager(root)
+        if ctx and hasattr(ctx, "request_context") and ctx.request_context:
+            state = ctx.request_context.lifespan_context
+            git_client = state["git_client"]
+            spec_manager = state["spec_manager"]
+        else:
+            git_client = GitClient(root)
+            spec_manager = SpecManager(root)
         initializer = ProjectInitializer(root, spec_manager, git_client)
         initializer.init_new_project(project_name, description)
 
@@ -58,6 +63,12 @@ def register_tools(mcp: FastMCP) -> None:
         ctx: Context | None = None,  # type: ignore[type-arg]
     ) -> dict[str, object]:
         """Run preflight checks: validate spec structure and return enforcement status.
+
+        Current implementation (Phase 1): checks that the three core spec files exist
+        (prd.md, arch.md, tasks.md). Returns allowed=True only when all are present.
+
+        Planned enforcement (Phase 4): lint checks, security review, spec-code alignment
+        validation, and docs freshness checks are not yet implemented.
 
         Returns:
             allowed: Whether the operation is allowed to proceed.

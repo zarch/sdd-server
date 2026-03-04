@@ -14,12 +14,6 @@ from sdd_server.models.custom_plugin import (
     CustomPluginRegistry,
     CustomPluginType,
 )
-from sdd_server.models.lifecycle import (
-    FeatureLifecycle,
-    LifecycleState,
-    LifecycleTransition,
-    ProjectLifecycle,
-)
 from sdd_server.models.spec import Feature, PRDMetadata, SpecFile, SpecType
 from sdd_server.models.state import (
     BypassRecord,
@@ -56,14 +50,10 @@ __all__ = [
     "CustomPluginRegistry",
     "CustomPluginType",
     "Feature",
-    "FeatureLifecycle",
     "FeatureState",
     "GeneratedFile",
     "GenerationResult",
-    "LifecycleState",
-    "LifecycleTransition",
     "PRDMetadata",
-    "ProjectLifecycle",
     "ProjectState",
     "ProjectValidationResult",
     "SDDBaseModel",

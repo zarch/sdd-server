@@ -21,7 +21,7 @@ from sdd_server.plugins.base import (
 )
 
 
-class SeniorDeveloperRole(RolePlugin):  # type: ignore[misc]
+class SeniorDeveloperRole(RolePlugin):
     """Senior Developer role plugin.
 
     The Senior Developer focuses on implementation quality and best
