@@ -1,5 +1,25 @@
 """SDD infrastructure package."""
 
+from sdd_server.infrastructure.config import (
+    DEFAULT_CONFIG_DIR,
+    DEFAULT_CONFIG_FILE,
+    AuditSettings,
+    Environment,
+    ExecutionConfig,
+    HealthCheckSettings,
+    LoggingConfig,
+    LogLevel,
+    MetricsSettings,
+    ObservabilityConfig,
+    PluginConfig,
+    RateLimitSettings,
+    RetrySettings,
+    SDDConfig,
+    SecurityConfig,
+    ServerConfig,
+    get_config,
+    reload_config,
+)
 from sdd_server.infrastructure.exceptions import (
     AlreadyInitializedError,
     ConfigurationError,
@@ -81,18 +101,27 @@ from sdd_server.infrastructure.security import (
 )
 
 __all__ = [
+    # Config
+    "DEFAULT_CONFIG_DIR",
+    "DEFAULT_CONFIG_FILE",
     "AlreadyInitializedError",
     "AsyncRetryContext",
     # Observability - Audit logging
     "AuditEvent",
     "AuditEventType",
     "AuditLogger",
+    # Config - Audit
+    "AuditSettings",
     "ConfigurationError",
     # Observability - Metrics
     "Counter",
+    # Config - Environment
+    "Environment",
     "ErrorCode",
     "ErrorContext",
     "ExecutionCancelledError",
+    # Config - Execution
+    "ExecutionConfig",
     "ExecutionError",
     "ExecutionTimeoutError",
     "FileNotFoundError_",
@@ -105,6 +134,8 @@ __all__ = [
     "HealthCheck",
     "HealthCheckRegistry",
     "HealthCheckResult",
+    # Config - Health
+    "HealthCheckSettings",
     "HealthStatus",
     "Histogram",
     "InMemoryRateLimiter",
@@ -112,16 +143,28 @@ __all__ = [
     "InputValidationError",
     # Security - Input validation
     "InputValidator",
+    # Config - Log level
+    "LogLevel",
+    # Config - Logging
+    "LoggingConfig",
     "MetricsCollector",
+    # Config - Metrics
+    "MetricsSettings",
     "NotInitializedError",
+    # Config - Observability
+    "ObservabilityConfig",
     "PathTraversalError",
     "PathValidator",
+    # Config - Plugin
+    "PluginConfig",
     "PluginError",
     "PluginLoadError",
     "PluginNotFoundError",
     "PluginValidationError",
     "RateLimitConfig",
     "RateLimitExceeded",
+    # Config - Rate limit
+    "RateLimitSettings",
     # Security - Rate limiting
     "RateLimiter",
     "RecipeNotFoundError",
@@ -130,10 +173,18 @@ __all__ = [
     "RetryContext",
     "RetryExhaustedError",
     "RetryResult",
+    # Config - Retry
+    "RetrySettings",
     "RetryStrategy",
+    # Config - Main
+    "SDDConfig",
     # Exceptions
     "SDDError",
+    # Config - Security
+    "SecurityConfig",
     "SecurityError",
+    # Config - Server
+    "ServerConfig",
     "SpecNotFoundError",
     "SpecParseError",
     "Timer",
@@ -142,13 +193,18 @@ __all__ = [
     "async_retry",
     "audit_log",
     "get_audit_logger",
+    # Config - Get config
+    "get_config",
     "get_metrics",
     "get_rate_limiter",
     "health_check_registry",
     "is_retryable_exception",
     "metric_counter",
     "metric_timer",
+    # Config - Rate limit decorator
     "rate_limit",
+    # Config - Reload config
+    "reload_config",
     "retry_on_exception",
     "retry_on_file_lock",
     "retry_on_timeout",
