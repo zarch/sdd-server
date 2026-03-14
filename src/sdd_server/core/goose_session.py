@@ -115,7 +115,13 @@ class SessionResult:
 
     @property
     def success(self) -> bool:
-        """Check if session completed successfully."""
+        """Check if session completed successfully.
+
+        Non-COMPLETED status (e.g. FAILED from a non-zero exit code) always
+        takes precedence over an envelope's own status field.
+        """
+        if self.status == SessionStatus.FAILED:
+            return False
         if self.envelope is not None:
             return self.envelope.is_completed
         return self.status == SessionStatus.COMPLETED

@@ -283,7 +283,9 @@ class GooseClientBridge(AIClientBridge):
             if proc.returncode == 0:
                 return stdout.decode().strip() or stderr.decode().strip()
             return f"unknown (exit {proc.returncode})"
-        except FileNotFoundError, TimeoutError:
+        except FileNotFoundError:
+            return "unavailable"
+        except TimeoutError:
             return "unavailable"
 
     async def check_compatibility(self) -> tuple[bool, str]:

@@ -29,7 +29,7 @@ class TestReviewList:
 
         assert "roles" in result
         assert "count" in result
-        assert result["count"] == 6
+        assert result["count"] == 10
 
     @pytest.mark.asyncio
     async def test_list_roles_sorted_by_priority(self, mcp_server: FastMCP) -> None:
@@ -225,7 +225,7 @@ class TestRecipesGenerate:
         )
 
         assert "generated" in result
-        assert result["count"] == 6
+        assert result["count"] == 10
 
     @pytest.mark.asyncio
     async def test_generate_validates_recipes(self, mcp_server: FastMCP, tmp_project) -> None:

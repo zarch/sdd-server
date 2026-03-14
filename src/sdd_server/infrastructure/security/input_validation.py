@@ -243,7 +243,7 @@ class PathValidator:
         try:
             self.validate(path)
             return True
-        except (PathTraversalError, InputValidationError):
+        except PathTraversalError, InputValidationError:
             return False
 
 

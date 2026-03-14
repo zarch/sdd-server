@@ -168,7 +168,7 @@ class TestRecipeGeneratorAllRecipes:
         )
 
         # Should have 6 recipes
-        assert len(paths) == 6
+        assert len(paths) == 10
 
         # All should exist
         for path in paths:
@@ -189,8 +189,8 @@ class TestRecipeGeneratorAllRecipes:
         # Architect should be first (no dependencies)
         assert names[0] == "architect"
 
-        # Senior developer should be last (depends on all others)
-        assert names[-1] == "senior-developer"
+        # Product owner should be last (depends on qa, tech-writer, devops)
+        assert names[-1] == "product-owner"
 
     def test_generate_all_recipes_valid_yaml(
         self,

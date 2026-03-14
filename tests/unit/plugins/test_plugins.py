@@ -169,7 +169,7 @@ class TestBuiltInRoles:
 
     def test_builtin_roles_count(self) -> None:
         """Test we have 6 built-in roles."""
-        assert len(BUILTIN_ROLES) == 6
+        assert len(BUILTIN_ROLES) == 10
 
     def test_architect_role_metadata(self) -> None:
         """Test ArchitectRole metadata."""
