@@ -69,6 +69,10 @@ class RoleEngine:
     # Properties
     # -------------------------------------------------------------------------
 
+    def update_context(self, context: dict[str, Any]) -> None:
+        """Merge *context* into the engine context (called per-request to inject ai_client etc.)."""
+        self._context.update(context)
+
     @property
     def results(self) -> dict[str, RoleResult]:
         """Get all role results."""
