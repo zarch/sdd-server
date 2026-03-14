@@ -9,7 +9,23 @@ from pathlib import Path
 
 from sdd_server.infrastructure.exceptions import GitError
 
-PRE_COMMIT_HOOK_CONTENT = "#!/bin/sh\nsdd preflight || exit 1\n"
+PRE_COMMIT_HOOK_CONTENT = """\
+#!/bin/sh
+# SDD pre-commit enforcement hook — installed by 'sdd init'. Do not edit manually.
+set -e
+
+echo "SDD: Running preflight checks..."
+sdd preflight --hook-mode
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+    echo ""
+    echo "SDD: Commit blocked. Fix the violations above, then:"
+    echo "  sdd bypass --reason \\"<your reason>\\"  # bypass for 24 h"
+    echo "  sdd preflight                           # re-check status"
+    exit 1
+fi
+"""
 
 
 class GitClient:
