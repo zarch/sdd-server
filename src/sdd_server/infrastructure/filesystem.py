@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 from sdd_server.infrastructure.exceptions import FileSystemError, PathTraversalError
+from sdd_server.infrastructure.retry import retry_on_file_lock
 
 
 class FileSystemClient:
@@ -38,6 +39,7 @@ class FileSystemClient:
         except OSError as exc:
             raise FileSystemError(f"Cannot read '{safe_path}': {exc}") from exc
 
+    @retry_on_file_lock()
     def write_file(self, path: Path, content: str) -> None:
         """Atomically write content to a file (tempfile + replace)."""
         safe_path = self._validate_path(path)
