@@ -1,12 +1,11 @@
-"""Tests for sdd_preflight tool enforcement checks."""
+"""Tests for sdd_preflight MCP tool (EnforcementEngine-backed)."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
+from sdd_server.core.metadata import MetadataManager
 from sdd_server.core.spec_manager import SpecManager
 from sdd_server.core.spec_validator import SpecValidator
 from sdd_server.infrastructure.git import GitClient
@@ -23,10 +22,12 @@ def _build_preflight_deps(
     structural_issues: list[str] | None = None,
     validation_result: MagicMock | None = None,
     hook_installed: bool = True,
-) -> tuple[SpecManager, SpecValidator, GitClient]:
+    tasks_content: str = "- [x] **Architect** — done",
+) -> tuple[SpecManager, SpecValidator, GitClient, MetadataManager]:
     """Return mocked preflight dependencies."""
     spec_manager = MagicMock(spec=SpecManager)
     spec_manager.validate_structure.return_value = structural_issues or []
+    spec_manager.read_spec.return_value = tasks_content
 
     spec_validator = MagicMock(spec=SpecValidator)
     if validation_result is None:
@@ -40,19 +41,22 @@ def _build_preflight_deps(
     git_client = MagicMock(spec=GitClient)
     git_client.is_hook_installed.return_value = hook_installed
 
-    return spec_manager, spec_validator, git_client
+    metadata = MagicMock(spec=MetadataManager)
+    state = MagicMock()
+    state.bypasses = []
+    metadata.load.return_value = state
+
+    return spec_manager, spec_validator, git_client, metadata
 
 
 async def _call_preflight(
     spec_manager: SpecManager,
     spec_validator: SpecValidator,
     git_client: GitClient,
+    metadata_manager: MetadataManager,
     tmp_path: Path,
 ) -> dict:
-    """Call the sdd_preflight logic directly (bypassing MCP context injection)."""
-    # Inline the preflight logic since it is an inner async function registered
-    # on the MCP server.  We replicate the core logic here and also test it via
-    # direct invocation of the init module's registered tool.
+    """Call the sdd_preflight MCP tool directly via FastMCP's tool registry."""
     from mcp.server.fastmcp import FastMCP
 
     from sdd_server.mcp.tools.init import register_tools
@@ -60,17 +64,15 @@ async def _call_preflight(
     app = FastMCP("test")
     register_tools(app)
 
-    # Invoke the tool by patching the dependencies at the module level and
-    # passing a fake ctx that returns our mocks from lifespan_context.
     fake_ctx = MagicMock()
     fake_ctx.request_context.lifespan_context = {
         "spec_manager": spec_manager,
         "spec_validator": spec_validator,
         "git_client": git_client,
+        "metadata_manager": metadata_manager,
         "project_root": tmp_path,
     }
 
-    # Get the registered tool function directly from the FastMCP instance
     tool_fn = None
     for tool in app._tool_manager.list_tools():
         if tool.name == "sdd_preflight":
@@ -82,53 +84,52 @@ async def _call_preflight(
 
 
 # ---------------------------------------------------------------------------
-# Tests: allowed flag
+# Tests: allowed / blocked flags
 # ---------------------------------------------------------------------------
 
 
 class TestPreflightAllowed:
-    @pytest.mark.asyncio
     async def test_allowed_when_all_checks_pass(self, tmp_path: Path) -> None:
-        sm, sv, gc = _build_preflight_deps(tmp_path)
-        result = await _call_preflight(sm, sv, gc, tmp_path)
+        sm, sv, gc, md = _build_preflight_deps(tmp_path)
+        result = await _call_preflight(sm, sv, gc, md, tmp_path)
 
         assert result["allowed"] is True
+        assert result["blocked"] is False
 
-    @pytest.mark.asyncio
     async def test_not_allowed_when_structural_issues(self, tmp_path: Path) -> None:
-        sm, sv, gc = _build_preflight_deps(tmp_path, structural_issues=["specs/prd.md not found"])
-        result = await _call_preflight(sm, sv, gc, tmp_path)
+        sm, sv, gc, md = _build_preflight_deps(
+            tmp_path, structural_issues=["specs/prd.md not found"]
+        )
+        result = await _call_preflight(sm, sv, gc, md, tmp_path)
 
         assert result["allowed"] is False
-        assert len(result["structural_issues"]) == 1
+        assert result["blocked"] is True
+        assert any(v["rule"] == "missing_spec_file" for v in result["violations"])
 
-    @pytest.mark.asyncio
     async def test_not_allowed_when_validation_errors(self, tmp_path: Path) -> None:
-        # Build a ValidationResult with one ERROR-severity issue
         vr = MagicMock()
         vr.is_valid = False
 
         spec_res = MagicMock()
         spec_res.feature = None
-
-        spec_type = MagicMock()
-        spec_type.value = "prd"
-        spec_res.spec_type = spec_type
+        spec_res.spec_type = MagicMock()
+        spec_res.spec_type.value = "prd"
 
         issue = MagicMock()
         issue.rule_name = "required_section"
         issue.message = "Missing ## Goals section"
         issue.severity = ValidationSeverity.ERROR
+        issue.suggestion = "Add a Goals section"
         spec_res.issues = [issue]
-
         vr.spec_results = [spec_res]
 
-        sm, sv, gc = _build_preflight_deps(tmp_path, validation_result=vr)
-        result = await _call_preflight(sm, sv, gc, tmp_path)
+        sm, sv, gc, md = _build_preflight_deps(tmp_path, validation_result=vr)
+        result = await _call_preflight(sm, sv, gc, md, tmp_path)
 
         assert result["allowed"] is False
-        assert len(result["validation_errors"]) == 1
-        assert "required_section" in result["validation_errors"][0]
+        assert result["blocked"] is True
+        violation_rules = [v["rule"] for v in result["violations"]]
+        assert "required_section" in violation_rules
 
 
 # ---------------------------------------------------------------------------
@@ -137,36 +138,33 @@ class TestPreflightAllowed:
 
 
 class TestPreflightCheckCounts:
-    @pytest.mark.asyncio
-    async def test_three_checks_total(self, tmp_path: Path) -> None:
-        sm, sv, gc = _build_preflight_deps(tmp_path)
-        result = await _call_preflight(sm, sv, gc, tmp_path)
+    async def test_four_checks_total(self, tmp_path: Path) -> None:
+        sm, sv, gc, md = _build_preflight_deps(tmp_path)
+        result = await _call_preflight(sm, sv, gc, md, tmp_path)
 
-        assert result["checks_total"] == 3
+        assert result["checks_run"] == 4
 
-    @pytest.mark.asyncio
-    async def test_all_three_pass(self, tmp_path: Path) -> None:
-        sm, sv, gc = _build_preflight_deps(tmp_path)
-        result = await _call_preflight(sm, sv, gc, tmp_path)
+    async def test_all_four_pass(self, tmp_path: Path) -> None:
+        sm, sv, gc, md = _build_preflight_deps(tmp_path, hook_installed=True)
+        result = await _call_preflight(sm, sv, gc, md, tmp_path)
 
-        assert result["checks_passed"] == 3
+        assert result["checks_passed"] == 4
 
-    @pytest.mark.asyncio
     async def test_one_check_fails_structural(self, tmp_path: Path) -> None:
-        sm, sv, gc = _build_preflight_deps(tmp_path, structural_issues=["missing prd.md"])
-        result = await _call_preflight(sm, sv, gc, tmp_path)
+        sm, sv, gc, md = _build_preflight_deps(tmp_path, structural_issues=["missing prd.md"])
+        result = await _call_preflight(sm, sv, gc, md, tmp_path)
 
-        assert result["checks_passed"] == 2  # validation + hook pass
+        assert result["checks_passed"] < 4
 
-    @pytest.mark.asyncio
     async def test_hook_missing_is_warning_not_blocking(self, tmp_path: Path) -> None:
-        sm, sv, gc = _build_preflight_deps(tmp_path, hook_installed=False)
-        result = await _call_preflight(sm, sv, gc, tmp_path)
+        sm, sv, gc, md = _build_preflight_deps(tmp_path, hook_installed=False)
+        result = await _call_preflight(sm, sv, gc, md, tmp_path)
 
         # Missing hook doesn't block
         assert result["allowed"] is True
-        # But it shows as a warning
-        assert any("pre-commit" in w for w in result["warnings"])
+        # But shows as a warning
+        warning_rules = [w["rule"] for w in result["warnings"]]
+        assert "missing_git_hook" in warning_rules
 
 
 # ---------------------------------------------------------------------------
@@ -175,38 +173,65 @@ class TestPreflightCheckCounts:
 
 
 class TestPreflightWarnings:
-    @pytest.mark.asyncio
     async def test_warning_includes_severity_warning_issues(self, tmp_path: Path) -> None:
         vr = MagicMock()
-        vr.is_valid = False
+        vr.is_valid = True  # no errors
 
         spec_res = MagicMock()
         spec_res.feature = None
-
-        spec_type = MagicMock()
-        spec_type.value = "arch"
-        spec_res.spec_type = spec_type
+        spec_res.spec_type = MagicMock()
+        spec_res.spec_type.value = "arch"
 
         issue = MagicMock()
         issue.rule_name = "optional_section"
         issue.message = "Recommended section missing"
         issue.severity = ValidationSeverity.WARNING
+        issue.suggestion = ""
         spec_res.issues = [issue]
-
         vr.spec_results = [spec_res]
 
-        sm, sv, gc = _build_preflight_deps(tmp_path, validation_result=vr)
-        result = await _call_preflight(sm, sv, gc, tmp_path)
+        sm, sv, gc, md = _build_preflight_deps(tmp_path, validation_result=vr)
+        result = await _call_preflight(sm, sv, gc, md, tmp_path)
 
-        # WARNING-level issues go to warnings, not validation_errors
-        assert len(result["validation_errors"]) == 0
-        assert any("optional_section" in w for w in result["warnings"])
+        # WARNING-level issues go to warnings, not violations
+        violation_rules = [v["rule"] for v in result["violations"]]
+        assert "optional_section" not in violation_rules
+        warning_rules = [w["rule"] for w in result["warnings"]]
+        assert "optional_section" in warning_rules
 
-    @pytest.mark.asyncio
     async def test_validator_crash_becomes_warning(self, tmp_path: Path) -> None:
-        sm, sv, gc = _build_preflight_deps(tmp_path)
+        sm, sv, gc, md = _build_preflight_deps(tmp_path)
         sv.validate_project.side_effect = RuntimeError("no spec files")
 
-        result = await _call_preflight(sm, sv, gc, tmp_path)
+        result = await _call_preflight(sm, sv, gc, md, tmp_path)
 
-        assert any("validator" in w.lower() or "spec" in w.lower() for w in result["warnings"])
+        warning_rules = [w["rule"] for w in result["warnings"]]
+        assert "validator_unavailable" in warning_rules
+        # Crash doesn't block
+        assert result["allowed"] is True
+
+
+# ---------------------------------------------------------------------------
+# Tests: bypass
+# ---------------------------------------------------------------------------
+
+
+class TestPreflightBypass:
+    async def test_bypass_active_suppresses_block(self, tmp_path: Path) -> None:
+        from datetime import UTC, datetime, timedelta
+
+        from sdd_server.models.state import BypassRecord
+
+        ts = datetime.now(UTC) - timedelta(seconds=10)
+        bypass = BypassRecord(timestamp=ts, actor="user", reason="hotfix", action="commit")
+
+        sm, sv, gc, md = _build_preflight_deps(tmp_path, structural_issues=["prd.md missing"])
+        state = MagicMock()
+        state.bypasses = [bypass]
+        md.load.return_value = state
+
+        result = await _call_preflight(sm, sv, gc, md, tmp_path)
+
+        assert result["allowed"] is True
+        assert result["bypass_active"] is True
+        assert result["bypass_reason"] == "hotfix"

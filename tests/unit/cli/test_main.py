@@ -117,6 +117,108 @@ class TestStatusCommand:
         assert result.exit_code == 0
 
 
+class TestBypassCommand:
+    """Tests for the `sdd bypass` command."""
+
+    def test_bypass_requires_reason(
+        self, cli_project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """bypass fails without --reason."""
+        monkeypatch.chdir(cli_project)
+        runner.invoke(app, ["init", "test-project"])
+        result = runner.invoke(app, ["bypass"])
+        assert result.exit_code != 0
+
+    def test_bypass_records_reason(
+        self, cli_project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """bypass with --reason succeeds and shows the reason."""
+        monkeypatch.chdir(cli_project)
+        runner.invoke(app, ["init", "test-project"])
+        result = runner.invoke(app, ["bypass", "--reason", "emergency fix"])
+        assert result.exit_code == 0
+        assert "emergency fix" in result.stdout
+
+    def test_bypass_shows_expiry(self, cli_project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """bypass output mentions expiry timeframe."""
+        monkeypatch.chdir(cli_project)
+        runner.invoke(app, ["init", "test-project"])
+        result = runner.invoke(app, ["bypass", "--reason", "test"])
+        assert result.exit_code == 0
+        assert "24" in result.stdout  # grace period hours
+
+    def test_bypass_with_action_option(
+        self, cli_project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """bypass --action records the specified action."""
+        monkeypatch.chdir(cli_project)
+        runner.invoke(app, ["init", "test-project"])
+        result = runner.invoke(app, ["bypass", "--reason", "test", "--action", "push"])
+        assert result.exit_code == 0
+        assert "push" in result.stdout
+
+    def test_bypass_allows_subsequent_preflight(
+        self, cli_project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """After bypass, preflight exits 0 even with blocking violations."""
+        monkeypatch.chdir(cli_project)
+        # Init project then remove prd.md to create a violation
+        runner.invoke(app, ["init", "test-project"])
+        (cli_project / "specs" / "prd.md").unlink()
+        # Confirm preflight is blocked
+        pre = runner.invoke(app, ["preflight"])
+        assert pre.exit_code != 0
+        # Record bypass
+        bp = runner.invoke(app, ["bypass", "--reason", "hotfix"])
+        assert bp.exit_code == 0
+        # Preflight should now pass
+        post = runner.invoke(app, ["preflight"])
+        assert post.exit_code == 0
+
+
+class TestPreflightCIMode:
+    """Tests for preflight --ci JSON output."""
+
+    @staticmethod
+    def _parse_json(stdout: str) -> dict:
+        """Extract JSON from output that may contain leading log lines."""
+        import json
+
+        # Find the first '{' — everything from there is the JSON payload
+        idx = stdout.find("{")
+        return json.loads(stdout[idx:])
+
+    def test_ci_mode_outputs_json(self, cli_project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """--ci flag produces JSON output."""
+        monkeypatch.chdir(cli_project)
+        runner.invoke(app, ["init", "test-project"])
+        result = runner.invoke(app, ["preflight", "--ci"])
+        data = self._parse_json(result.stdout)
+        assert "blocked" in data
+        assert "violations" in data
+        assert "warnings" in data
+
+    def test_ci_mode_allowed_true_on_success(
+        self, cli_project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """--ci flag returns allowed=True when no blocking violations."""
+        monkeypatch.chdir(cli_project)
+        runner.invoke(app, ["init", "test-project"])
+        result = runner.invoke(app, ["preflight", "--ci"])
+        data = self._parse_json(result.stdout)
+        assert data["allowed"] is True
+
+    def test_ci_mode_blocked_without_init(
+        self, cli_project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """--ci flag returns blocked=True when spec files missing."""
+        monkeypatch.chdir(cli_project)
+        result = runner.invoke(app, ["preflight", "--ci"])
+        data = self._parse_json(result.stdout)
+        assert data["blocked"] is True
+        assert result.exit_code != 0
+
+
 class TestVersionCommand:
     """Tests for version flag."""
 
