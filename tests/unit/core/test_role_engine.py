@@ -170,3 +170,63 @@ class TestRoleEngine:
         # Architect is always first
         result_names = list(results.keys())
         assert result_names[0] == "architect"
+
+    @pytest.mark.asyncio
+    async def test_update_context_merges_values(self, registry_with_roles: PluginRegistry) -> None:
+        """update_context() merges keys into engine context."""
+        engine = RoleEngine(registry_with_roles, context={"project_root": "/initial"})
+        engine.update_context({"project_root": "/updated", "extra": "value"})
+
+        assert engine._context["project_root"] == "/updated"
+        assert engine._context["extra"] == "value"
+
+    @pytest.mark.asyncio
+    async def test_update_context_does_not_clear_existing(
+        self, registry_with_roles: PluginRegistry
+    ) -> None:
+        """update_context() is additive, not a full replacement."""
+        engine = RoleEngine(registry_with_roles, context={"existing_key": "kept"})
+        engine.update_context({"new_key": "added"})
+
+        assert engine._context["existing_key"] == "kept"
+        assert engine._context["new_key"] == "added"
+
+    @pytest.mark.asyncio
+    async def test_update_context_propagates_to_roles(
+        self, registry_with_roles: PluginRegistry
+    ) -> None:
+        """Context injected via update_context() reaches role.initialize()."""
+        from unittest.mock import AsyncMock, patch
+
+        engine = RoleEngine(registry_with_roles)
+        engine.update_context({"project_root": "/test/project"})
+
+        # Run just the architect role so it calls initialize with our context
+        with patch.object(
+            registry_with_roles.get_role("architect"),
+            "initialize",
+            new_callable=AsyncMock,
+        ) as mock_init:
+            mock_init.return_value = None
+            # Patch review too so it doesn't crash
+            with patch.object(
+                registry_with_roles.get_role("architect"),
+                "review",
+                new_callable=AsyncMock,
+            ) as mock_review:
+                from datetime import datetime
+
+                from sdd_server.plugins.base import RoleResult, RoleStatus
+
+                mock_review.return_value = RoleResult(
+                    role="architect",
+                    status=RoleStatus.COMPLETED,
+                    success=True,
+                    output="mocked",
+                    started_at=datetime.now(),
+                )
+                await engine.run_roles(["architect"])
+
+            mock_init.assert_called_once()
+            ctx_passed = mock_init.call_args[0][0]
+            assert ctx_passed.get("project_root") == "/test/project"
