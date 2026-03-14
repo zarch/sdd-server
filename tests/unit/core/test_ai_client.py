@@ -85,7 +85,7 @@ class TestGooseClientBridgeCheckCompatibility:
 
 class TestGooseClientBridgeInvokeRole:
     async def test_missing_recipe_returns_failure(self, tmp_path: Path) -> None:
-        """If recipe file does not exist, execute_recipe raises RecipeNotFoundError → FAILED result."""
+        """If recipe file does not exist, execute_recipe raises RecipeNotFoundError."""
         bridge = GooseClientBridge(project_root=tmp_path)
 
         result = await bridge.invoke_role(
@@ -120,3 +120,94 @@ class TestCreateAiClient:
     def test_unknown_type_raises(self, tmp_path: Path) -> None:
         with pytest.raises(ValueError, match="Unknown AI client"):
             create_ai_client("claude", tmp_path)
+
+
+class TestGooseClientBridgeInvokeRoleSession:
+    """Tests for named-session behaviour in invoke_role."""
+
+    async def test_invoke_role_uses_named_session(self, tmp_path: Path) -> None:
+        bridge = GooseClientBridge(project_root=tmp_path)
+        recipe = tmp_path / "recipes" / "architect.yml"
+        recipe.parent.mkdir(parents=True)
+        recipe.write_text("version: '1.0'\n")
+
+        envelope = '{"sdd_role": "architect", "status": "completed", "summary": "done"}'
+        with patch("sdd_server.core.goose_session.asyncio.create_subprocess_exec") as mock_exec:
+            mock_proc = MagicMock()
+            mock_proc.returncode = 0
+            mock_proc.communicate = AsyncMock(return_value=(envelope.encode(), b""))
+            mock_exec.return_value = mock_proc
+
+            result = await bridge.invoke_role(
+                "architect", {"scope": "all", "feature": "auth"}, recipe_path=recipe
+            )
+
+        # Check that session subcommand was used with --name
+        call_args = mock_exec.call_args[0]
+        cmd = list(call_args)
+        assert "session" in cmd
+        assert "--name" in cmd
+        name_idx = cmd.index("--name")
+        assert "sdd-architect" in cmd[name_idx + 1]
+        assert result.success is True
+
+    async def test_invoke_role_session_name_includes_feature(self, tmp_path: Path) -> None:
+        bridge = GooseClientBridge(project_root=tmp_path)
+        recipe = tmp_path / "recipes" / "security-analyst.yml"
+        recipe.parent.mkdir(parents=True)
+        recipe.write_text("version: '1.0'\n")
+
+        envelope = '{"sdd_role": "security-analyst", "status": "completed", "summary": "done"}'
+        with patch("sdd_server.core.goose_session.asyncio.create_subprocess_exec") as mock_exec:
+            mock_proc = MagicMock()
+            mock_proc.returncode = 0
+            mock_proc.communicate = AsyncMock(return_value=(envelope.encode(), b""))
+            mock_exec.return_value = mock_proc
+
+            await bridge.invoke_role(
+                "security-analyst", {"feature": "auth-flow"}, recipe_path=recipe
+            )
+
+        call_args = mock_exec.call_args[0]
+        cmd = list(call_args)
+        name_idx = cmd.index("--name")
+        assert "auth-flow" in cmd[name_idx + 1] or "auth" in cmd[name_idx + 1]
+
+    async def test_needs_retry_propagated_in_error(self, tmp_path: Path) -> None:
+        bridge = GooseClientBridge(project_root=tmp_path)
+        recipe = tmp_path / "recipes" / "architect.yml"
+        recipe.parent.mkdir(parents=True)
+        recipe.write_text("v: 1\n")
+
+        envelope = (
+            '{"sdd_role": "architect", "status": "needs_retry", '
+            '"summary": "lost context", "retry_hint": "please restart"}'
+        )
+        with patch("sdd_server.core.goose_session.asyncio.create_subprocess_exec") as mock_exec:
+            mock_proc = MagicMock()
+            mock_proc.returncode = 0
+            mock_proc.communicate = AsyncMock(return_value=(envelope.encode(), b""))
+            mock_exec.return_value = mock_proc
+
+            result = await bridge.invoke_role("architect", {"scope": "all"}, recipe_path=recipe)
+
+        assert not result.success
+        assert "needs_retry" in (result.error or "")
+
+
+class TestGetVersionSyntaxFix:
+    """Verify the Python 2 except syntax has been fixed."""
+
+    async def test_file_not_found_handled(self, tmp_path: Path) -> None:
+        bridge = GooseClientBridge(project_root=tmp_path)
+        with patch("asyncio.create_subprocess_exec", side_effect=FileNotFoundError):
+            version = await bridge.get_version()
+        assert version == "unavailable"
+
+    async def test_timeout_handled(self, tmp_path: Path) -> None:
+        bridge = GooseClientBridge(project_root=tmp_path)
+        mock_proc = MagicMock()
+        mock_proc.communicate = AsyncMock(side_effect=TimeoutError())
+        with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+            version = await bridge.get_version()
+        assert version == "unavailable"

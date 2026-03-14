@@ -5,6 +5,7 @@ role-based reviews via recipes.
 """
 
 import asyncio
+import contextlib
 import json
 import os
 import shutil
@@ -40,6 +41,34 @@ class OutputFormat(StrEnum):
 
 
 @dataclass
+class RoleCompletionEnvelope:
+    """Structured completion envelope emitted by SDD role agents.
+
+    The agent writes this as the last NDJSON line so the orchestrator
+    can reliably detect success vs. silent failure.
+    """
+
+    sdd_role: str
+    status: str  # "completed" | "needs_retry" | "blocked"
+    summary: str
+    findings: list[dict[str, Any]] = field(default_factory=list)
+    session_name: str | None = None
+    retry_hint: str | None = None
+
+    @property
+    def is_completed(self) -> bool:
+        return self.status == "completed"
+
+    @property
+    def needs_retry(self) -> bool:
+        return self.status == "needs_retry"
+
+    @property
+    def is_blocked(self) -> bool:
+        return self.status == "blocked"
+
+
+@dataclass
 class GooseConfig:
     """Configuration for Goose CLI execution."""
 
@@ -54,6 +83,13 @@ class GooseConfig:
     quiet: bool = True
     working_dir: Path | None = None
     env: dict[str, str] = field(default_factory=dict)
+    # Session management
+    session_name: str | None = None  # --name for goose session
+    resume: bool = False  # --resume flag
+    fork: bool = False  # --fork flag (implies resume)
+    # Context window management (Goose env vars)
+    context_strategy: str = "summarize"  # GOOSE_CONTEXT_STRATEGY
+    auto_compact_threshold: float = 0.35  # GOOSE_AUTO_COMPACT_THRESHOLD
 
     def __post_init__(self) -> None:
         """Convert working_dir to Path if string."""
@@ -75,11 +111,21 @@ class SessionResult:
     error: str | None = None
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
     messages: list[dict[str, Any]] = field(default_factory=list)
+    envelope: RoleCompletionEnvelope | None = None
 
     @property
     def success(self) -> bool:
         """Check if session completed successfully."""
+        if self.envelope is not None:
+            return self.envelope.is_completed
         return self.status == SessionStatus.COMPLETED
+
+    @property
+    def needs_retry(self) -> bool:
+        """Check if the role agent requested a retry."""
+        if self.envelope is not None:
+            return self.envelope.needs_retry
+        return False
 
 
 class GooseSessionError(Exception):
@@ -121,13 +167,13 @@ class GooseSession:
         """Get current configuration."""
         return self._config
 
-    def _build_command(
+    def _build_run_command(
         self,
         recipe_path: Path | str,
         params: dict[str, str] | None = None,
         instructions: str | None = None,
     ) -> list[str]:
-        """Build Goose CLI command.
+        """Build ``goose run`` command (existing behaviour).
 
         Args:
             recipe_path: Path to recipe file
@@ -176,24 +222,92 @@ class GooseSession:
 
         return cmd
 
+    def _build_session_command(
+        self,
+        recipe_path: Path | str,
+        params: dict[str, str] | None = None,
+        instructions: str | None = None,
+    ) -> list[str]:
+        """Build ``goose session`` command for named/resumable sessions.
+
+        Args:
+            recipe_path: Path to recipe file (content passed via stdin)
+            params: Parameters (passed via stdin)
+            instructions: Additional instructions (passed via stdin)
+
+        Returns:
+            Command arguments list
+        """
+        session_name = self._config.session_name or ""
+        cmd = [self._config.goose_path, "session"]
+        if session_name:
+            cmd.extend(["--name", session_name])
+
+        if self._config.resume or self._config.fork:
+            cmd.append("--resume")
+        if self._config.fork:
+            cmd.append("--fork")
+
+        if self._config.max_turns is not None:
+            cmd.extend(["--max-turns", str(self._config.max_turns)])
+
+        if self._config.max_tool_repetitions is not None:
+            cmd.extend(["--max-tool-repetitions", str(self._config.max_tool_repetitions)])
+
+        return cmd
+
+    def _build_command(
+        self,
+        recipe_path: Path | str,
+        params: dict[str, str] | None = None,
+        instructions: str | None = None,
+    ) -> list[str]:
+        """Build Goose CLI command.
+
+        Dispatches to ``_build_run_command`` or ``_build_session_command``
+        depending on whether a session name is configured.
+
+        Args:
+            recipe_path: Path to recipe file
+            params: Parameters to pass to the recipe
+            instructions: Additional instructions text
+
+        Returns:
+            Command arguments list
+        """
+        if self._config.session_name:
+            return self._build_session_command(recipe_path, params, instructions)
+        return self._build_run_command(recipe_path, params, instructions)
+
     def _build_env(self) -> dict[str, str]:
         """Build environment variables for subprocess.
+
+        Always injects context-window management variables
+        (``GOOSE_CONTEXT_STRATEGY``, ``GOOSE_AUTO_COMPACT_THRESHOLD``).
+        User-supplied ``env`` overrides the defaults.
 
         Returns:
             Environment dict
         """
         env = os.environ.copy()
+        # Context window management — always set defaults first
+        env["GOOSE_CONTEXT_STRATEGY"] = self._config.context_strategy
+        env["GOOSE_AUTO_COMPACT_THRESHOLD"] = str(self._config.auto_compact_threshold)
+        # Caller overrides last
         env.update(self._config.env)
         return env
 
     async def _run_command(
         self,
         cmd: list[str],
+        *,
+        stdin_data: bytes | None = None,
     ) -> tuple[int, str, str]:
         """Run command and capture output.
 
         Args:
             cmd: Command and arguments
+            stdin_data: Optional bytes to feed to the process stdin
 
         Returns:
             Tuple of (return_code, stdout, stderr)
@@ -206,6 +320,7 @@ class GooseSession:
         try:
             self._process = await asyncio.create_subprocess_exec(
                 *cmd,
+                stdin=asyncio.subprocess.PIPE if stdin_data else None,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=str(self._config.working_dir) if self._config.working_dir else None,
@@ -216,7 +331,7 @@ class GooseSession:
 
         try:
             stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                self._process.communicate(),
+                self._process.communicate(input=stdin_data),
                 timeout=self._config.timeout_seconds,
             )
         except TimeoutError:
@@ -269,6 +384,37 @@ class GooseSession:
 
         return final_response, tool_calls
 
+    def _extract_envelope(self, output: str) -> RoleCompletionEnvelope | None:
+        """Scan output lines in reverse for the first valid SDD envelope.
+
+        The role agent is expected to emit a JSON object with at least
+        ``sdd_role`` and ``status`` keys as the last meaningful line.
+
+        Args:
+            output: Raw stdout from the Goose subprocess
+
+        Returns:
+            Parsed envelope or ``None`` if not found
+        """
+        for line in reversed(output.strip().split("\n")):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+                if isinstance(data, dict) and "sdd_role" in data and "status" in data:
+                    return RoleCompletionEnvelope(
+                        sdd_role=data["sdd_role"],
+                        status=data.get("status", "completed"),
+                        summary=data.get("summary", ""),
+                        findings=data.get("findings", []),
+                        session_name=data.get("session_name"),
+                        retry_hint=data.get("retry_hint"),
+                    )
+            except json.JSONDecodeError:
+                continue
+        return None
+
     async def execute_recipe(
         self,
         recipe_path: Path | str,
@@ -300,8 +446,20 @@ class GooseSession:
         # Build command
         cmd = self._build_command(recipe_path, params, instructions)
 
+        # Build stdin data for session mode
+        stdin_data: bytes | None = None
+        if self._config.session_name:
+            parts: list[str] = []
+            with contextlib.suppress(Exception):
+                parts.append(recipe_path.read_text(encoding="utf-8"))
+            if params:
+                parts.append("Parameters:\n" + "\n".join(f"  {k}: {v}" for k, v in params.items()))
+            if instructions:
+                parts.append(instructions)
+            stdin_data = "\n\n".join(parts).encode("utf-8") if parts else None
+
         try:
-            returncode, stdout, stderr = await self._run_command(cmd)
+            returncode, stdout, stderr = await self._run_command(cmd, stdin_data=stdin_data)
 
             # Parse output
             if self._config.output_format == OutputFormat.JSON:
@@ -313,16 +471,26 @@ class GooseSession:
             completed_at = datetime.now()
             duration = (completed_at - started_at).total_seconds()
 
+            # Extract role completion envelope
+            envelope = self._extract_envelope(stdout)
+
             # Determine status
             if self._cancelled:
                 status = SessionStatus.CANCELLED
-            elif returncode == 0:
-                status = SessionStatus.COMPLETED
-            else:
+            elif returncode != 0:
                 status = SessionStatus.FAILED
+            elif self._config.session_name:
+                # Session mode: envelope presence + status determine success
+                if envelope is not None and envelope.is_completed:
+                    status = SessionStatus.COMPLETED
+                else:
+                    status = SessionStatus.FAILED  # no envelope or needs_retry/blocked
+            else:
+                # Run mode (no session): exit code is authoritative
+                status = SessionStatus.COMPLETED
 
             result = SessionResult(
-                session_id=None,  # No session when using --no-session
+                session_id=None,
                 status=status,
                 output=output,
                 raw_output=stdout + stderr,
@@ -331,6 +499,7 @@ class GooseSession:
                 duration_seconds=duration,
                 error=stderr if returncode != 0 else None,
                 tool_calls=tool_calls,
+                envelope=envelope,
             )
 
             if returncode != 0:

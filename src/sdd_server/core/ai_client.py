@@ -6,6 +6,7 @@ Architecture reference: arch.md Section 5.3
 from __future__ import annotations
 
 import asyncio
+import re
 import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -125,11 +126,20 @@ class GooseClientBridge(AIClientBridge):
     # Helpers
     # ------------------------------------------------------------------
 
-    def _make_session(self) -> GooseSession:
+    def _make_session(
+        self,
+        *,
+        session_name: str | None = None,
+        resume: bool = False,
+        fork: bool = False,
+    ) -> GooseSession:
         config = GooseConfig(
             goose_path=self._goose_path,
             timeout_seconds=self._timeout,
             working_dir=self._project_root,
+            session_name=session_name,
+            resume=resume,
+            fork=fork,
         )
         return GooseSession(config)
 
@@ -137,10 +147,13 @@ class GooseClientBridge(AIClientBridge):
         """Convert SessionResult → ClientResult."""
         success = session_result.status == SessionStatus.COMPLETED
         exit_code = 0 if success else 1
+        error = session_result.error
+        if not success and session_result.needs_retry:
+            error = f"needs_retry: {session_result.envelope.retry_hint or 'agent requested retry'}"
         return ClientResult(
             success=success,
             output=session_result.output,
-            error=session_result.error,
+            error=error,
             exit_code=exit_code,
         )
 
@@ -192,7 +205,15 @@ class GooseClientBridge(AIClientBridge):
         if recipe_path is None:
             recipe_path = self._project_root / "recipes" / f"{role_name}.yml"
 
-        session = self._make_session()
+        # Build deterministic session name
+        scope = context.get("scope", "all")
+        feature = str(context.get("feature", "") or context.get("target", ""))
+        qualifier = feature or scope
+        # sanitize: lowercase, replace non-alphanumeric (except dashes) with dashes
+        qualifier = re.sub(r"[^a-z0-9-]", "-", qualifier.lower()).strip("-") or "default"
+        session_name = f"sdd-{role_name}-{qualifier}"
+
+        session = self._make_session(session_name=session_name, resume=True)
         params = {k: str(v) for k, v in context.items() if isinstance(v, (str, int, float, Path))}
         try:
             result = await session.execute_recipe(recipe_path=recipe_path, params=params)
