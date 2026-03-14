@@ -18,7 +18,12 @@ from sdd_server.core.spec_manager import SpecManager
 from sdd_server.core.spec_validator import SpecValidator
 from sdd_server.core.startup import StartupValidator
 from sdd_server.core.task_manager import TaskBreakdownManager
+from sdd_server.infrastructure.config import get_config
 from sdd_server.infrastructure.git import GitClient
+from sdd_server.infrastructure.observability.audit import configure_audit_logger
+from sdd_server.infrastructure.observability.health import FilesystemCheck, health_check_registry
+from sdd_server.infrastructure.observability.metrics import get_metrics
+from sdd_server.infrastructure.security.rate_limiter import RateLimitConfig, configure_rate_limiter
 from sdd_server.utils.logging import configure_logging, get_logger
 
 logger = get_logger(__name__)
@@ -43,10 +48,29 @@ async def lifespan(server: FastMCP) -> AsyncIterator[LifespanContext]:
     """Set up server context on startup; validate environment."""
     configure_logging(level=os.getenv("SDD_LOG_LEVEL", "INFO"))
 
+    config = get_config()
+
+    # Configure audit logger
+    if config.observability.audit.enabled and config.observability.audit.file_path:
+        configure_audit_logger(file_path=Path(config.observability.audit.file_path))
+
+    # Configure rate limiter from config
+    rate_cfg = RateLimitConfig(
+        requests_per_window=config.security.rate_limit.requests_per_window,
+        window_seconds=config.security.rate_limit.window_seconds,
+    )
+    configure_rate_limiter(rate_cfg)
+
+    # Initialise metrics collector
+    get_metrics()
+
     project_root = Path(os.getenv("SDD_PROJECT_ROOT", ".")).resolve()
     specs_dir = os.getenv("SPECS_DIR", "specs")
 
     logger.info("sdd_server_starting", project_root=str(project_root))
+
+    # Register filesystem health check
+    health_check_registry.register(FilesystemCheck(str(project_root), name="project_root"))
 
     spec_manager = SpecManager(project_root, specs_dir)
     metadata = MetadataManager(project_root, specs_dir)
@@ -87,6 +111,8 @@ async def lifespan(server: FastMCP) -> AsyncIterator[LifespanContext]:
         else:
             logger.warning("startup_check_warning", check=check.name, msg=check.message)
 
+    logger.info("sdd_server_ready", config_source="env+defaults")
+
     yield {
         "project_root": project_root,
         "spec_manager": spec_manager,
@@ -114,6 +140,7 @@ def create_server() -> FastMCP:
     from sdd_server.mcp.tools.codegen import register_tools as reg_codegen
     from sdd_server.mcp.tools.custom_plugins import register_tools as reg_custom_plugins
     from sdd_server.mcp.tools.feature import register_tools as reg_feature
+    from sdd_server.mcp.tools.health import register_tools as reg_health
     from sdd_server.mcp.tools.init import register_tools as reg_init
     from sdd_server.mcp.tools.review import register_tools as reg_review
     from sdd_server.mcp.tools.spec import register_tools as reg_spec
@@ -131,6 +158,7 @@ def create_server() -> FastMCP:
     reg_validation(server)
     reg_custom_plugins(server)
     reg_align(server)
+    reg_health(server)
     reg_prompts(server)
     register_resources(server)
 
