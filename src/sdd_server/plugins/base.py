@@ -62,6 +62,10 @@ class RoleStage(StrEnum):
     EDGE_CASE_ANALYSIS = "edge-case-analysis"
     IMPLEMENTATION = "implementation"
     REVIEW = "review"
+    QA = "qa"
+    DOCUMENTATION = "documentation"
+    DEVOPS = "devops"
+    RELEASE = "release"
 
 
 class RoleStatus(StrEnum):
@@ -200,6 +204,10 @@ class RolePlugin(BasePlugin):
     - security-analyst: Security analysis (stage: SECURITY)
     - edge-case-analyst: Edge case analysis (stage: EDGE_CASE_ANALYSIS)
     - senior-developer: Implementation review (stage: IMPLEMENTATION)
+    - qa-engineer: Acceptance testing and quality assurance (stage: QA)
+    - tech-writer: Documentation generation (stage: DOCUMENTATION)
+    - devops-engineer: CI/CD and deployment review (stage: DEVOPS)
+    - product-owner: Release sign-off and PRD acceptance (stage: RELEASE)
     """
 
     @abstractmethod
