@@ -52,3 +52,35 @@ def test_list_directory(tmp_path: Path) -> None:
     names = [p.name for p in items]
     assert "a.txt" in names
     assert "b.txt" in names
+
+
+def test_write_file_has_retry_decorator(tmp_path: Path) -> None:
+    """write_file should be wrapped with retry_on_file_lock."""
+    from sdd_server.infrastructure.filesystem import FileSystemClient
+
+    fs = FileSystemClient(tmp_path)
+    # The decorator wraps the original; __wrapped__ is set by functools.wraps
+    assert hasattr(fs.write_file, "__wrapped__"), "write_file should be decorated with retry"
+
+
+def test_write_file_retries_on_oserror(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """write_file retries transient OSErrors before succeeding."""
+    import os
+
+    call_count = 0
+    original_replace = os.replace
+
+    def flaky_replace(src: str, dst: str) -> None:
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            raise OSError("resource temporarily unavailable")
+        original_replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", flaky_replace)
+
+    fs = FileSystemClient(tmp_path)
+    target = tmp_path / "retry_test.txt"
+    fs.write_file(target, "data")
+    assert target.read_text() == "data"
+    assert call_count == 3
