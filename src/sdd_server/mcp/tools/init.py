@@ -8,7 +8,6 @@ from mcp.server.fastmcp import Context, FastMCP
 
 from sdd_server.core.initializer import ProjectInitializer
 from sdd_server.core.spec_manager import SpecManager
-from sdd_server.core.spec_validator import SpecValidator
 from sdd_server.core.startup import StartupValidator
 from sdd_server.infrastructure.git import GitClient
 from sdd_server.infrastructure.observability.audit import AuditEventType, get_audit_logger
@@ -84,25 +83,38 @@ def register_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def sdd_preflight(
+        action: str = "commit",
         ctx: Context | None = None,  # type: ignore[type-arg]
     ) -> dict[str, object]:
-        """Run preflight checks: validate spec structure and return enforcement status.
+        """Run enforcement checks: validate spec structure, content, role reviews, and git hook.
 
         Checks performed:
-        1. Core spec files present (prd.md, arch.md, tasks.md)
-        2. Spec validation rules (content, required sections)
-        3. Git pre-commit hook installed
+        1. Core spec files present (prd.md, arch.md, tasks.md)       → BLOCKING
+        2. Spec validation rules (content, required sections)          → BLOCKING/WARNING
+        3. Role review checklist in tasks.md                          → WARNING
+        4. Git pre-commit hook installed                              → WARNING
+
+        Active bypasses (recorded via sdd bypass) suppress blocking violations for 24 h.
+
+        Args:
+            action: The action being checked (default: "commit").
 
         Returns:
-            allowed: True only when all blocking checks pass.
-            structural_issues: Missing or malformed spec files.
-            validation_errors: Rule violations found by the spec validator.
-            warnings: Non-blocking issues (e.g. missing git hook).
+            allowed: True only when no blocking violations remain.
+            blocked: True when the action is blocked.
+            violations: List of blocking violation dicts.
+            warnings: List of non-blocking warning dicts.
+            bypass_active: Whether an active bypass is in effect.
+            bypass_reason: Reason for the active bypass (if any).
             checks_passed: Count of checks that passed.
-            checks_total: Total checks run.
+            checks_run: Total checks run.
         """
         try:
             import os
+
+            from sdd_server.core.enforcement import EnforcementEngine
+            from sdd_server.core.metadata import MetadataManager
+            from sdd_server.core.spec_validator import SpecValidator
 
             if ctx and hasattr(ctx, "request_context") and ctx.request_context:
                 state = ctx.request_context.lifespan_context
@@ -110,63 +122,34 @@ def register_tools(mcp: FastMCP) -> None:
                 spec_validator: SpecValidator = state["spec_validator"]
                 git_client = state["git_client"]
                 root = state["project_root"]
+                metadata_manager: MetadataManager = state.get(
+                    "metadata_manager", MetadataManager(root)
+                )
             else:
                 root = Path(os.getenv("SDD_PROJECT_ROOT", ".")).resolve()
                 spec_manager = SpecManager(root)
                 spec_validator = SpecValidator(root)
                 git_client = GitClient(root)
+                metadata_manager = MetadataManager(root)
 
-            checks_passed = 0
-            checks_total = 0
-            structural_issues: list[str] = []
-            validation_errors: list[str] = []
-            warnings: list[str] = []
+            engine = EnforcementEngine(
+                project_root=root,
+                spec_manager=spec_manager,
+                spec_validator=spec_validator,
+                git_client=git_client,
+                metadata_manager=metadata_manager,
+            )
+            report = await engine.run_async(action=action)
 
-            # --- Check 1: core spec files exist ---
-            checks_total += 1
-            structural_issues = spec_manager.validate_structure()
-            if not structural_issues:
-                checks_passed += 1
-
-            # --- Check 2: spec validation rules ---
-            checks_total += 1
-            try:
-                validation_result = spec_validator.validate_project(include_features=True)
-                if validation_result.is_valid:
-                    checks_passed += 1
-                else:
-                    for spec_res in validation_result.spec_results:
-                        for issue in spec_res.issues:
-                            from sdd_server.models.validation import ValidationSeverity
-
-                            loc = spec_res.spec_type.value
-                            if spec_res.feature:
-                                loc = f"{spec_res.feature}/{loc}"
-                            msg = f"[{loc}] {issue.rule_name}: {issue.message}"
-                            if issue.severity == ValidationSeverity.ERROR:
-                                validation_errors.append(msg)
-                            else:
-                                warnings.append(msg)
-            except Exception:
-                # Validation may fail if no spec files exist yet — treat as warning
-                warnings.append("Spec validator could not run (no spec files found)")
-
-            # --- Check 3: git pre-commit hook installed ---
-            checks_total += 1
-            hook_ok = git_client.is_hook_installed("pre-commit")
-            if hook_ok:
-                checks_passed += 1
-            else:
-                warnings.append("pre-commit hook not installed — run 'sdd init' to install it")
-
-            allowed = len(structural_issues) == 0 and len(validation_errors) == 0
             return {
-                "allowed": allowed,
-                "structural_issues": structural_issues,
-                "validation_errors": validation_errors,
-                "warnings": warnings,
-                "checks_passed": checks_passed,
-                "checks_total": checks_total,
+                "allowed": not report.blocked,
+                "blocked": report.blocked,
+                "violations": [v.as_dict() for v in report.violations],
+                "warnings": [w.as_dict() for w in report.warnings],
+                "bypass_active": report.bypass_active,
+                "bypass_reason": report.bypass_reason,
+                "checks_passed": report.checks_passed,
+                "checks_run": report.checks_run,
             }
         except Exception as exc:
             return format_error(exc)
