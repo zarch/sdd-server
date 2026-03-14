@@ -17,7 +17,6 @@ from sdd_server.plugins.base import (
     RolePlugin,
     RoleResult,
     RoleStage,
-    RoleStatus,
 )
 
 
@@ -67,21 +66,7 @@ class SecurityAnalystRole(RolePlugin):
         Returns:
             RoleResult with security findings
         """
-        started_at = datetime.now()
-
-        return RoleResult(
-            role=self.name,
-            status=RoleStatus.PENDING,
-            success=False,
-            output="Security analysis review pending - run with AI client",
-            issues=[],
-            suggestions=[
-                "Run the security-analyst recipe to perform full security review",
-                "Review authentication mechanisms",
-                "Check for OWASP Top 10 vulnerabilities",
-            ],
-            started_at=started_at,
-        )
+        return await self._run_with_ai_client(scope, target, datetime.now())
 
     def get_recipe_template(self) -> str:
         """Return Jinja2 template for security analyst recipe."""

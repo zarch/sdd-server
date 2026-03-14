@@ -13,6 +13,7 @@ Architecture reference: arch.md Section 9.1-9.2
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 from pydantic import Field
@@ -232,6 +233,61 @@ class RolePlugin(BasePlugin):
             Jinja2 template string
         """
         ...
+
+    async def _run_with_ai_client(
+        self,
+        scope: str,
+        target: str | None,
+        started_at: datetime,
+    ) -> RoleResult:
+        """Invoke this role via the AI client stored in context.
+
+        Falls back to a PENDING stub when no AI client is available so that
+        the rest of the pipeline can continue without crashing.
+        """
+        ai_client = self._context.get("ai_client")
+        project_root = str(self._context.get("project_root", "."))
+
+        if ai_client is None:
+            return RoleResult(
+                role=self.name,
+                status=RoleStatus.PENDING,
+                success=False,
+                output=f"{self.name} review pending — no AI client configured",
+                suggestions=[
+                    "Pass ai_client in context or set SDD_AI_CLIENT=goose and ensure Goose is on PATH"
+                ],
+                started_at=started_at,
+            )
+
+        recipe_path = Path(project_root) / "recipes" / f"{self.name}.yml"
+        invoke_context: dict[str, Any] = {
+            "scope": scope,
+            "target": target or "",
+            "project_root": project_root,
+        }
+        result = await ai_client.invoke_role(
+            self.name,
+            invoke_context,
+            recipe_path if recipe_path.exists() else None,
+        )
+
+        if result.success:
+            return RoleResult(
+                role=self.name,
+                status=RoleStatus.COMPLETED,
+                success=True,
+                output=result.output,
+                started_at=started_at,
+            )
+        return RoleResult(
+            role=self.name,
+            status=RoleStatus.FAILED,
+            success=False,
+            output=result.output or "",
+            issues=[result.error or "AI client invocation failed"],
+            started_at=started_at,
+        )
 
     def get_dependencies(self) -> list[str]:
         """Return list of role names this role depends on.

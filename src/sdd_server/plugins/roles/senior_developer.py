@@ -17,7 +17,6 @@ from sdd_server.plugins.base import (
     RolePlugin,
     RoleResult,
     RoleStage,
-    RoleStatus,
 )
 
 
@@ -72,21 +71,7 @@ class SeniorDeveloperRole(RolePlugin):
         Returns:
             RoleResult with implementation findings
         """
-        started_at = datetime.now()
-
-        return RoleResult(
-            role=self.name,
-            status=RoleStatus.PENDING,
-            success=False,
-            output="Implementation review pending - run with AI client",
-            issues=[],
-            suggestions=[
-                "Run the senior-developer recipe to perform full implementation review",
-                "Review code for best practices compliance",
-                "Check test coverage for critical paths",
-            ],
-            started_at=started_at,
-        )
+        return await self._run_with_ai_client(scope, target, datetime.now())
 
     def get_recipe_template(self) -> str:
         """Return Jinja2 template for senior developer recipe."""

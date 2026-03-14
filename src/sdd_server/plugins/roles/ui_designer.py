@@ -17,7 +17,6 @@ from sdd_server.plugins.base import (
     RolePlugin,
     RoleResult,
     RoleStage,
-    RoleStatus,
 )
 
 
@@ -66,21 +65,7 @@ class UIDesignerRole(RolePlugin):
         Returns:
             RoleResult with UI/UX findings
         """
-        started_at = datetime.now()
-
-        return RoleResult(
-            role=self.name,
-            status=RoleStatus.PENDING,
-            success=False,
-            output="UI/UX design review pending - run with AI client",
-            issues=[],
-            suggestions=[
-                "Run the ui-designer recipe to perform full UX review",
-                "Review user flows documented in specs",
-                "Ensure accessibility requirements are specified",
-            ],
-            started_at=started_at,
-        )
+        return await self._run_with_ai_client(scope, target, datetime.now())
 
     def get_recipe_template(self) -> str:
         """Return Jinja2 template for UI designer recipe."""

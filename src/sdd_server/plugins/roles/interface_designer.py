@@ -17,7 +17,6 @@ from sdd_server.plugins.base import (
     RolePlugin,
     RoleResult,
     RoleStage,
-    RoleStatus,
 )
 
 
@@ -66,21 +65,7 @@ class InterfaceDesignerRole(RolePlugin):
         Returns:
             RoleResult with interface design findings
         """
-        started_at = datetime.now()
-
-        return RoleResult(
-            role=self.name,
-            status=RoleStatus.PENDING,
-            success=False,
-            output="Interface design review pending - run with AI client",
-            issues=[],
-            suggestions=[
-                "Run the interface-designer recipe to perform full interface review",
-                "Review API contracts documented in specs",
-                "Ensure error handling is properly specified",
-            ],
-            started_at=started_at,
-        )
+        return await self._run_with_ai_client(scope, target, datetime.now())
 
     def get_recipe_template(self) -> str:
         """Return Jinja2 template for interface designer recipe."""

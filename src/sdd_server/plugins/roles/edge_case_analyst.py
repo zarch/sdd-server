@@ -17,7 +17,6 @@ from sdd_server.plugins.base import (
     RolePlugin,
     RoleResult,
     RoleStage,
-    RoleStatus,
 )
 
 
@@ -62,30 +61,8 @@ class EdgeCaseAnalystRole(RolePlugin):
         scope: str = "all",
         target: str | None = None,
     ) -> RoleResult:
-        """Perform edge case analysis review.
-
-        Args:
-            scope: Review scope - "specs", "code", or "all"
-            target: Optional feature name to focus on
-
-        Returns:
-            RoleResult with edge case findings
-        """
-        started_at = datetime.now()
-
-        return RoleResult(
-            role=self.name,
-            status=RoleStatus.PENDING,
-            success=False,
-            output="Edge case analysis review pending - run with AI client",
-            issues=[],
-            suggestions=[
-                "Run the edge-case-analyst recipe to perform full edge case review",
-                "Review boundary conditions in data handling",
-                "Check error handling for all failure modes",
-            ],
-            started_at=started_at,
-        )
+        """Perform edge case analysis review via AI client."""
+        return await self._run_with_ai_client(scope, target, datetime.now())
 
     def get_recipe_template(self) -> str:
         """Return Jinja2 template for edge case analyst recipe."""

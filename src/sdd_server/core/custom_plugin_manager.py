@@ -27,7 +27,6 @@ from sdd_server.plugins.base import (
     RolePlugin,
     RoleResult,
     RoleStage,
-    RoleStatus,
 )
 from sdd_server.utils.logging import get_logger
 
@@ -78,22 +77,7 @@ class DynamicRolePlugin(RolePlugin):
         Returns:
             RoleResult with findings
         """
-        started_at = datetime.now()
-
-        # The actual review is performed by the AI client
-        # This returns a placeholder result
-        return RoleResult(
-            role=self.name,
-            status=RoleStatus.PENDING,
-            success=False,
-            output=f"Custom role '{self.name}' review pending - run with AI client",
-            issues=[],
-            suggestions=[
-                f"Run the {self.name} recipe to perform the review",
-                "Check the plugin configuration for details",
-            ],
-            started_at=started_at,
-        )
+        return await self._run_with_ai_client(scope, target, datetime.now())
 
     def get_recipe_template(self) -> str:
         """Return the recipe template for this plugin."""
