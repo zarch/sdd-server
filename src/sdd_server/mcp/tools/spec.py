@@ -8,7 +8,10 @@ from mcp.server.fastmcp import Context, FastMCP
 
 from sdd_server.core.spec_manager import SpecManager
 from sdd_server.infrastructure.exceptions import SDDError, SpecNotFoundError
+from sdd_server.infrastructure.observability.audit import AuditEventType, get_audit_logger
+from sdd_server.infrastructure.observability.metrics import get_metrics
 from sdd_server.mcp.server import LifespanContext
+from sdd_server.mcp.tools._utils import check_rate_limit, format_error
 from sdd_server.models.spec import SpecType
 
 
@@ -47,9 +50,18 @@ def register_tools(mcp: FastMCP) -> None:
         mgr = _get_spec_manager(ctx)
         try:
             content = mgr.read_spec(stype, feature or None)
+            get_audit_logger().log_event(
+                AuditEventType.FILE_READ,
+                message=f"Read spec: {spec_type}" + (f"/{feature}" if feature else ""),
+                resource=spec_type,
+                result="success",
+            )
+            get_metrics().counter("sdd.tool.calls", labels={"tool": "sdd_spec_read"}).increment()
             return {"content": content, "spec_type": spec_type, "feature": feature}
         except SpecNotFoundError as exc:
-            return {"error": str(exc)}
+            return format_error(exc)
+        except Exception as exc:
+            return format_error(exc)
 
     @mcp.tool()
     async def sdd_spec_write(
@@ -67,6 +79,9 @@ def register_tools(mcp: FastMCP) -> None:
             feature: Feature name for feature-level specs (empty for root specs).
             mode: 'overwrite' | 'append' | 'prepend'
         """
+        if rate_err := check_rate_limit("sdd_spec_write"):
+            return rate_err
+
         try:
             stype = SpecType(spec_type)
         except ValueError:
@@ -75,11 +90,27 @@ def register_tools(mcp: FastMCP) -> None:
             }
 
         mgr = _get_spec_manager(ctx)
+        audit = get_audit_logger()
         try:
             mgr.write_spec(stype, content, feature or None, mode)
+            audit.log_event(
+                AuditEventType.SPEC_UPDATE,
+                message=f"Wrote spec: {spec_type}" + (f"/{feature}" if feature else ""),
+                resource=spec_type,
+                result="success",
+            )
+            get_metrics().counter("sdd.tool.calls", labels={"tool": "sdd_spec_write"}).increment()
             return {"success": True, "spec_type": spec_type, "feature": feature, "mode": mode}
         except SDDError as exc:
-            return {"error": str(exc)}
+            audit.log_event(
+                AuditEventType.SPEC_UPDATE,
+                message=f"Failed to write spec: {spec_type}",
+                resource=spec_type,
+                result="failure",
+            )
+            return format_error(exc)
+        except Exception as exc:
+            return format_error(exc)
 
     @mcp.tool()
     async def sdd_spec_list(
@@ -89,18 +120,21 @@ def register_tools(mcp: FastMCP) -> None:
 
         Returns a dict describing the spec structure.
         """
-        mgr = _get_spec_manager(ctx)
-        features = mgr.list_features()
-        issues = mgr.validate_structure()
+        try:
+            mgr = _get_spec_manager(ctx)
+            features = mgr.list_features()
+            issues = mgr.validate_structure()
 
-        structure: dict[str, object] = {
-            "root": {
-                "prd": mgr.paths.prd_path.exists(),
-                "arch": mgr.paths.arch_path.exists(),
-                "tasks": mgr.paths.tasks_path.exists(),
-                "context_hints": mgr.paths.context_hints_path.exists(),
-            },
-            "features": features,
-            "issues": issues,
-        }
-        return structure
+            structure: dict[str, object] = {
+                "root": {
+                    "prd": mgr.paths.prd_path.exists(),
+                    "arch": mgr.paths.arch_path.exists(),
+                    "tasks": mgr.paths.tasks_path.exists(),
+                    "context_hints": mgr.paths.context_hints_path.exists(),
+                },
+                "features": features,
+                "issues": issues,
+            }
+            return structure
+        except Exception as exc:
+            return format_error(exc)

@@ -46,12 +46,12 @@ def _get_registry() -> PluginRegistry:
     return _registry
 
 
-def _get_engine(context: dict[str, Any] | None = None) -> RoleEngine:
-    """Get or create the role engine."""
+def _get_engine() -> RoleEngine:
+    """Get or create the role engine (context injected per-request via update_context)."""
     global _engine
     registry = _get_registry()
     if _engine is None:
-        _engine = RoleEngine(registry, context or {})
+        _engine = RoleEngine(registry)
     return _engine
 
 
@@ -132,7 +132,15 @@ def register_tools(mcp: FastMCP) -> None:
             summary: Human-readable summary
         """
         registry = _get_registry()
-        engine = _get_engine({"project_root": str(_get_project_root())})
+        engine = _get_engine()
+
+        # Inject per-request context (ai_client from lifespan, project_root)
+        run_context: dict[str, Any] = {"project_root": str(_get_project_root())}
+        if ctx and hasattr(ctx, "request_context") and ctx.request_context:
+            ai_client = ctx.request_context.lifespan_context.get("ai_client")
+            if ai_client is not None:
+                run_context["ai_client"] = ai_client
+        engine.update_context(run_context)
 
         # Determine which roles to run
         if roles:
