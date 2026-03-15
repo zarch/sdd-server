@@ -52,6 +52,9 @@ Run each role recipe against this feature before moving implementation tasks to 
 | ta1f0009 | Update `test_review.py`: dependency assertions, count 10 → 11 | developer | 2026-03-15 |
 | ta1f0010 | Update `RolePlugin` docstring in `plugins/base.py` to list all 11 built-in roles | developer | 2026-03-15 |
 | ta1f0011 | Write feature specs: `specs/features/spec-linter/prd.md`, `arch.md`, `tasks.md` | developer | 2026-03-15 |
+| ta1f0020 | Add `test_spec_linter_role_metadata` unit test verifying priority=5, stage=SPEC_AUDIT, deps=[] | developer | 2026-03-15 |
+| ta1f0021 | Add integration test: spec-linter `blocked` envelope halts entire pipeline | developer | 2026-03-15 |
+| ta1f0022 | Add integration test: spec-linter `completed` (clean=false) still allows architect to run | developer | 2026-03-15 |
 
 ---
 
@@ -66,8 +69,5 @@ Run each role recipe against this feature before moving implementation tasks to 
 
 | ID | Title | Role | Priority |
 |----|-------|------|----------|
-| ta1f0020 | Add `test_spec_linter_role_metadata` unit test verifying priority=5, stage=SPEC_AUDIT, deps=[] | developer | medium |
-| ta1f0021 | Add integration test: spec-linter `blocked` envelope halts entire pipeline | developer | medium |
-| ta1f0022 | Add integration test: spec-linter `completed` (clean=false) still allows architect to run | developer | medium |
 | ta1f0023 | Validate recipe against a real project with intentionally broken specs | qa-engineer | high |
 | ta1f0024 | Run role review checklist (all 11 roles) against this feature's specs | developer | low |

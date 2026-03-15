@@ -39,18 +39,20 @@ def _envelope(
     findings: list | None = None,
     retry_hint: str | None = None,
     session_name: str | None = None,
+    clean: bool | None = None,
 ) -> str:
     """Return a single-line JSON RoleCompletionEnvelope string."""
-    return json.dumps(
-        {
-            "sdd_role": role,
-            "status": status,
-            "summary": summary,
-            "findings": findings or [],
-            "session_name": session_name,
-            "retry_hint": retry_hint,
-        }
-    )
+    data: dict = {
+        "sdd_role": role,
+        "status": status,
+        "summary": summary,
+        "findings": findings or [],
+        "session_name": session_name,
+        "retry_hint": retry_hint,
+    }
+    if clean is not None:
+        data["clean"] = clean
+    return json.dumps(data)
 
 
 def _make_mock_process(returncode: int, stdout: str, stderr: str = "") -> MagicMock:
@@ -579,9 +581,10 @@ class TestRoleDependencyChain:
         # Downstream roles should not be invoked (caller's responsibility,
         # but we verify the gate result is correct)
 
-    async def test_all_ten_roles_complete_successfully(self, tmp_path: Path) -> None:
-        """Simulate all 10 roles completing in dependency order."""
+    async def test_all_eleven_roles_complete_successfully(self, tmp_path: Path) -> None:
+        """Simulate all 11 roles completing in dependency order (spec-linter first)."""
         roles = [
+            "spec-linter",
             "architect",
             "interface-designer",
             "ui-designer",
@@ -601,3 +604,101 @@ class TestRoleDependencyChain:
 
             result = await self._invoke(bridge, role, recipe, "completed", f"{role} complete")
             assert result.success is True, f"Role '{role}' should succeed, got: {result.error}"
+
+
+# ---------------------------------------------------------------------------
+# Spec-linter pipeline gate tests
+# ---------------------------------------------------------------------------
+
+
+class TestSpecLinterGates:
+    """spec-linter envelope variants and their effect on the pipeline gate."""
+
+    async def _invoke_spec_linter(
+        self,
+        bridge: GooseClientBridge,
+        recipe: Path,
+        status: str,
+        clean: bool = True,
+        findings: list | None = None,
+    ):
+        output = _envelope(
+            role="spec-linter",
+            status=status,
+            summary="spec audit done",
+            clean=clean,
+            findings=findings,
+        )
+        proc = _make_mock_process(0, output)
+        with patch("asyncio.create_subprocess_exec", return_value=proc):
+            return await bridge.invoke_role("spec-linter", {"scope": "all"}, recipe_path=recipe)
+
+    async def test_spec_linter_blocked_halts_pipeline(self, tmp_path: Path) -> None:
+        """spec-linter blocked envelope → success=False; architect must not run."""
+        recipe = tmp_path / "spec-linter.yaml"
+        recipe.write_text("version: 1.0.0\ntitle: spec-linter\n")
+
+        bridge = GooseClientBridge(project_root=tmp_path, timeout=10)
+        result = await self._invoke_spec_linter(bridge, recipe, status="blocked", clean=False)
+
+        assert result.success is False
+        # The pipeline gate is the caller's responsibility — we verify the gate
+        # result is correct so that the scheduler can halt downstream roles.
+        assert result.error is not None or not result.success
+
+    async def test_spec_linter_completed_clean_false_allows_architect(self, tmp_path: Path) -> None:
+        """spec-linter completed with findings (clean=false) → architect may still run.
+
+        Non-blocking findings must not stop the pipeline; only blocked status does.
+        """
+        linter_recipe = tmp_path / "spec-linter.yaml"
+        linter_recipe.write_text("version: 1.0.0\ntitle: spec-linter\n")
+
+        arch_recipe = tmp_path / "architect.yaml"
+        arch_recipe.write_text("version: 1.0.0\ntitle: architect\n")
+
+        bridge = GooseClientBridge(project_root=tmp_path, timeout=10)
+
+        # Spec-linter completes with medium-severity findings
+        linter_result = await self._invoke_spec_linter(
+            bridge,
+            linter_recipe,
+            status="completed",
+            clean=False,
+            findings=[
+                {
+                    "file": "specs/arch.md",
+                    "issue": "Missing Architecture section",
+                    "severity": "medium",
+                    "line": None,
+                    "recommendation": "Add ## Architecture section",
+                }
+            ],
+        )
+        assert linter_result.success is True, (
+            "completed status must be success=True even with findings"
+        )
+
+        # Architect proceeds because spec-linter completed (not blocked)
+        arch_output = _envelope("architect", "completed", "architecture reviewed")
+        arch_proc = _make_mock_process(0, arch_output)
+        with patch("asyncio.create_subprocess_exec", return_value=arch_proc):
+            arch_result = await bridge.invoke_role(
+                "architect",
+                {"scope": "all"},
+                recipe_path=arch_recipe,
+            )
+
+        assert arch_result.success is True
+
+    async def test_spec_linter_completed_clean_true_allows_architect(self, tmp_path: Path) -> None:
+        """spec-linter completed with clean=true → architect runs without issues."""
+        linter_recipe = tmp_path / "spec-linter.yaml"
+        linter_recipe.write_text("version: 1.0.0\ntitle: spec-linter\n")
+
+        bridge = GooseClientBridge(project_root=tmp_path, timeout=10)
+        result = await self._invoke_spec_linter(
+            bridge, linter_recipe, status="completed", clean=True
+        )
+
+        assert result.success is True

@@ -222,6 +222,16 @@ class TestBuiltInRoles:
         assert "architect" in deps
         assert "security-analyst" in deps
 
+    def test_spec_linter_role_metadata(self) -> None:
+        """Test SpecLinterRole metadata: priority=5, stage=SPEC_AUDIT, no dependencies."""
+        from sdd_server.plugins.roles.spec_linter import SpecLinterRole
+
+        role = SpecLinterRole()
+        assert role.metadata.name == "spec-linter"
+        assert role.metadata.priority == 5
+        assert role.metadata.stage == RoleStage.SPEC_AUDIT
+        assert role.get_dependencies() == []
+
     def test_all_roles_have_recipe_template(self) -> None:
         """Test all roles return a recipe template."""
         for role_class in BUILTIN_ROLES:
