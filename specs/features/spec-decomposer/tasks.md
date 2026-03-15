@@ -31,9 +31,9 @@ Run each role recipe against this feature before moving implementation tasks to 
 |-------|-------|--------|
 | 1 | Feature specs written (this file) | ✅ Complete |
 | 2 | Role reviews (all 11 roles) | ⬜ Pending |
-| 3 | Core decomposer engine (`SpecDecomposer` class) | ⬜ Pending |
-| 4 | MCP tool registration (`sdd_decompose_specs`) | ⬜ Pending |
-| 5 | Unit and integration tests | ⬜ Pending |
+| 3 | Core decomposer engine (`SpecDecomposer` class) | ✅ Complete |
+| 4 | MCP tool registration (`sdd_decompose_specs`) | ✅ Complete |
+| 5 | Unit and integration tests | 🔵 Partial (unit done; integration pending) |
 
 ---
 
@@ -42,6 +42,22 @@ Run each role recipe against this feature before moving implementation tasks to 
 | ID | Title | Role | Completed |
 |----|-------|------|-----------|
 | tb2f0001 | Write feature specs: `specs/features/spec-decomposer/prd.md`, `arch.md`, `tasks.md` | developer | 2026-03-15 |
+| tb2f0020 | Create `src/sdd_server/core/spec_decomposer.py` — `SpecDecomposer` with `FeatureBoundary`, `DecompositionResult` | developer | 2026-03-15 |
+| tb2f0021 | Implement `FeatureBoundary` and `DecompositionResult` Pydantic models | developer | 2026-03-15 |
+| tb2f0022 | Implement heading-based feature boundary detection (Pass 1) | developer | 2026-03-15 |
+| tb2f0023 | Implement AC-grouping fallback feature detection (Pass 2) | developer | 2026-03-15 |
+| tb2f0024 | Implement `_slugify()` with numbered/feature/section prefix stripping and kebab-case normalisation | developer | 2026-03-15 |
+| tb2f0025 | Implement `_write_feature_prd()` with back-reference and AC preservation | developer | 2026-03-15 |
+| tb2f0026 | Implement `_write_feature_arch_stub()` with placeholder section | developer | 2026-03-15 |
+| tb2f0027 | Implement `_write_feature_tasks_stub()` with full 11-role checklist | developer | 2026-03-15 |
+| tb2f0028 | Implement `_patch_root_prd()` — add/update `## Feature Index` section (non-destructive) | developer | 2026-03-15 |
+| tb2f0029 | Implement idempotency: detect existing feature dirs, skip without `--force` | developer | 2026-03-15 |
+| tb2f0030 | Implement dry-run mode: return `DecompositionResult` without writing files | developer | 2026-03-15 |
+| tb2f0031 | Cap maximum features at 50; report unassigned ACs and coverage percentage | developer | 2026-03-15 |
+| tb2f0040 | Create `src/sdd_server/mcp/tools/decompose.py` — `sdd_decompose_specs` tool handler | developer | 2026-03-15 |
+| tb2f0041 | Register `sdd_decompose_specs` in `src/sdd_server/mcp/server.py` | developer | 2026-03-15 |
+| tb2f0050 | Write unit tests: `tests/unit/core/test_spec_decomposer.py` — 27 tests across detection, slugify, dry-run, idempotency | developer | 2026-03-15 |
+| tb2f0051 | Write unit tests: `tests/unit/mcp/tools/test_decompose.py` — 11 tests, tool parameter validation and error handling | developer | 2026-03-15 |
 
 ---
 
