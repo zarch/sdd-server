@@ -7,6 +7,7 @@ Complete reference for all MCP tools provided by the SDD Server.
 - [Project Initialization](#project-initialization)
 - [Spec Management](#spec-management)
 - [Feature Management](#feature-management)
+- [On-Demand Spec Analysis](#on-demand-spec-analysis)
 - [Task Management](#task-management)
 - [Review Tools](#review-tools)
 - [Lifecycle Management](#lifecycle-management)
@@ -145,6 +146,96 @@ List all features in the project.
   "count": 2
 }
 ```
+
+---
+
+## On-Demand Spec Analysis
+
+These tools operate outside the review pipeline and can be called at any time.
+
+### sdd_bootstrap_specs
+
+Reverse-engineer an existing codebase into SDD-compliant specs. Invokes the `spec-bootstrapper` Goose recipe which surveys the source tree, reads package manifests, mines test names for acceptance criteria, and generates `specs/prd.md`, `specs/arch.md`, and feature stubs.
+
+**Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `update_existing` | boolean | No | `false` | Extend existing specs instead of blocking. Feature directories are always skipped if they exist. |
+| `target_path` | string | No | `"."` | Path to the project to bootstrap (resolved relative to `SDD_PROJECT_ROOT`). |
+| `max_features` | integer | No | `20` | Max feature stubs to generate. Clamped to 20. |
+
+**Returns:**
+
+```json
+{
+  "status": "completed",
+  "summary": "Bootstrap complete — prd.md + arch.md generated, 4 features detected",
+  "mode": "generate",
+  "generated": ["specs/prd.md", "specs/arch.md", "specs/features/auth/prd.md"],
+  "skipped": [],
+  "omitted_features": [],
+  "stats": {
+    "source_files_scanned": 42,
+    "tests_analyzed": 15,
+    "acs_generated": 12,
+    "features_detected": 4
+  }
+}
+```
+
+**`status` values:**
+
+| Value | Meaning |
+|-------|---------|
+| `completed` | Specs generated or updated successfully |
+| `blocked` | `specs/prd.md` already exists and `update_existing=false` — pass `update_existing=true` to update |
+| `needs_retry` | Recipe lost context mid-session; call again |
+| `error` | Goose invocation failed or path traversal detected |
+
+**Direct recipe invocation:**
+
+```bash
+goose run --recipe specs/recipes/spec-bootstrapper.yaml
+```
+
+---
+
+### sdd_decompose_specs
+
+Split a monolithic `specs/prd.md` into per-feature subdirectories under `specs/features/`. Detects feature boundaries via H2/H3 headings and AC groupings, then writes `prd.md`, `arch.md`, and `tasks.md` stubs for each feature. Patches the root `prd.md` with a `## Feature Index` section.
+
+**Parameters:**
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `dry_run` | boolean | No | `false` | Return a result without writing any files |
+| `force` | boolean | No | `false` | Overwrite existing feature directories |
+| `target_feature` | string | No | `null` | Decompose only this feature (slug or heading text). Decomposes all if omitted. |
+
+**Returns:**
+
+```json
+{
+  "status": "ok",
+  "features_created": 3,
+  "features_skipped": 1,
+  "files_created": [
+    "specs/features/auth/prd.md",
+    "specs/features/auth/arch.md",
+    "specs/features/auth/tasks.md"
+  ],
+  "skipped": [{"slug": "payments", "reason": "already_exists"}],
+  "unassigned_acs": ["AC-07"],
+  "coverage_pct": 91.7,
+  "dry_run": false
+}
+```
+
+**Notes:**
+- Feature directories that already exist are always skipped unless `force=true`
+- Maximum 50 features per run
+- `coverage_pct` shows what percentage of AC-XX identifiers in `prd.md` were assigned to a feature
 
 ---
 

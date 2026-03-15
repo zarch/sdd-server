@@ -331,6 +331,55 @@ result = await sdd_validate_spec(
 report = await sdd_validate_project(include_features=True)
 ```
 
+### Onboarding an Existing Project
+
+Use this workflow when you have a codebase but no specs yet.
+
+```python
+# 1. Generate specs from existing code
+result = await sdd_bootstrap_specs()
+# result["status"] == "completed"
+# result["generated"] == ["specs/prd.md", "specs/arch.md", ...]
+# result["stats"]["features_detected"] == 4
+
+# 2. If specs already exist, update them instead
+result = await sdd_bootstrap_specs(update_existing=True)
+
+# 3. Optionally limit feature stubs (max 20)
+result = await sdd_bootstrap_specs(max_features=5)
+
+# 4. Run the review pipeline — spec-linter validates first
+review = await sdd_review_run(scope="all", parallel=True)
+```
+
+You can also invoke the bootstrapper directly without the MCP server:
+
+```bash
+goose run --recipe specs/recipes/spec-bootstrapper.yaml
+```
+
+### Decomposing a Monolithic PRD
+
+Use this when `specs/prd.md` covers many features and you want per-feature subdirectories.
+
+```python
+# Preview what would be created (no files written)
+result = await sdd_decompose_specs(dry_run=True)
+# result["features_created"] == 5  (would create)
+# result["coverage_pct"] == 87.5   (% of AC-XX assigned)
+
+# Run the decomposition
+result = await sdd_decompose_specs()
+# Creates: specs/features/<slug>/prd.md + arch.md + tasks.md
+# Patches: specs/prd.md with ## Feature Index section
+
+# Decompose only one feature
+result = await sdd_decompose_specs(target_feature="user-auth")
+
+# Force overwrite of an existing feature directory
+result = await sdd_decompose_specs(target_feature="payments", force=True)
+```
+
 ---
 
 ## Best Practices

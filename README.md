@@ -13,12 +13,13 @@
 5. [Connecting to an AI client](#connecting-to-an-ai-client)
 6. [Starting the server](#starting-the-server)
 7. [First project walkthrough](#first-project-walkthrough)
-8. [MCP tool reference](#mcp-tool-reference)
-9. [The 10-role pipeline](#the-10-role-pipeline)
-10. [Role completion envelopes](#role-completion-envelopes)
-11. [Environment variables](#environment-variables)
-12. [Custom plugins](#custom-plugins)
-13. [Development](#development)
+8. [Onboarding an existing project](#onboarding-an-existing-project)
+9. [MCP tool reference](#mcp-tool-reference)
+10. [The 11-role pipeline](#the-11-role-pipeline)
+11. [Role completion envelopes](#role-completion-envelopes)
+12. [Environment variables](#environment-variables)
+13. [Custom plugins](#custom-plugins)
+14. [Development](#development)
 
 ---
 
@@ -38,13 +39,23 @@ A git pre-commit hook installed by `sdd_init` blocks commits that violate this r
 ## How it works
 
 ```
-Developer writes PRD
-        │
-        ▼
-  sdd_init / sdd_spec_write
-        │
-        ▼
+Developer writes PRD  ─── or ───  sdd_bootstrap_specs (existing codebase)
+        │                                     │
+        ▼                                     ▼
+  sdd_init / sdd_spec_write        specs/prd.md + arch.md generated
+        │                                     │
+        └──────────────┬──────────────────────┘
+                       │
+                       ▼
+           sdd_decompose_specs (optional)
+           Splits monolithic PRD into specs/features/<slug>/
+                       │
+                       ▼
   sdd_review_run  ──────────────────────────────────────────────────────────┐
+        │                                                                    │
+        ▼                                                                    │
+  Spec Linter (priority 5)                                                  │
+  Validates prd.md / arch.md structure before pipeline starts              │
         │                                                                    │
         ▼                                                                    │
   Architect (priority 10)                                                   │
@@ -293,6 +304,47 @@ Returns `allowed: true/false`. The git hook calls this automatically before each
 
 ---
 
+## Onboarding an existing project
+
+If you already have a codebase but no specs, use `sdd_bootstrap_specs` to reverse-engineer them:
+
+### 1. Generate specs from code
+
+```
+sdd_bootstrap_specs()
+```
+
+This invokes the `spec-bootstrapper` Goose recipe which:
+- Scans your source tree (languages, frameworks, entry points)
+- Reads package manifests (`pyproject.toml`, `package.json`, `go.mod`, …)
+- Mines test names and docstrings for acceptance criteria
+- Scans git history and README for feature intent
+- Generates `specs/prd.md`, `specs/arch.md`, and up to 20 `specs/features/<slug>/` stubs
+
+If specs already exist, the tool returns `status: "blocked"` to prevent accidental overwrite. Pass `update_existing=True` to extend them instead.
+
+### 2. Decompose a monolithic PRD (optional)
+
+If your `specs/prd.md` covers many features in a single document:
+
+```
+sdd_decompose_specs()
+```
+
+This splits the PRD into per-feature subdirectories under `specs/features/`, creating `prd.md`, `arch.md`, and `tasks.md` stubs for each detected feature. Feature directories that already exist are always skipped (idempotent). Use `dry_run=True` to preview without writing files.
+
+### 3. Run the review pipeline
+
+Once specs exist, continue with the standard pipeline:
+
+```
+sdd_review_run(scope="all", parallel=True)
+```
+
+The Spec Linter runs first (priority 5) and validates the generated specs before any other role begins.
+
+---
+
 ## MCP tool reference
 
 ### Initialization
@@ -359,6 +411,23 @@ Returns `allowed: true/false`. The git hook calls this automatically before each
 | `sdd_validate_rule_add` | `rule_type`, `config` | Add a custom validation rule |
 | `sdd_validate_rule_list` | — | List active rules |
 
+### On-demand spec tools
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `sdd_bootstrap_specs` | `update_existing?`, `target_path?`, `max_features?` | Reverse-engineer an existing codebase into SDD specs |
+| `sdd_decompose_specs` | `dry_run?`, `force?`, `target_feature?` | Split a monolithic `specs/prd.md` into per-feature subdirectories |
+
+`sdd_bootstrap_specs` parameters:
+- `update_existing` (bool, default `false`) — extend existing specs; `false` returns `blocked` if `specs/prd.md` already exists
+- `target_path` (str, default `"."`) — path to the project root to bootstrap
+- `max_features` (int, default `20`, max `20`) — maximum feature stubs to generate
+
+`sdd_decompose_specs` parameters:
+- `dry_run` (bool, default `false`) — return a result without writing any files
+- `force` (bool, default `false`) — overwrite existing feature directories
+- `target_feature` (str, optional) — decompose only this feature (slug or heading)
+
 ### Spec alignment
 
 | Tool | Parameters | Description |
@@ -382,13 +451,14 @@ Returns `allowed: true/false`. The git hook calls this automatically before each
 
 ---
 
-## The 10-role pipeline
+## The 11-role pipeline
 
 Roles execute in priority order. Roles with the same priority can run in parallel. Each role reads from `specs/arch.md` and appends its findings section.
 
-| Priority | Role | Stage | Depends on | Adds to arch.md |
+| Priority | Role | Stage | Depends on | Output |
 |---|---|---|---|---|
-| 10 | `architect` | ARCHITECTURE | — | Component Design, Data Flow, Tech Choices, Risks |
+| 5 | `spec-linter` | SPEC_AUDIT | — | Validates prd.md / arch.md structure; emits `clean: true/false` |
+| 10 | `architect` | ARCHITECTURE | spec-linter | Component Design, Data Flow, Tech Choices, Risks |
 | 20 | `interface-designer` | INTERFACE_DESIGN | architect | API Endpoints, Schemas, Error Catalogue |
 | 20 | `ui-designer` | UI_DESIGN | architect | User Flows, WCAG, Component Inventory |
 | 30 | `security-analyst` | SECURITY | interface-designer | Threat Model, OWASP Assessment, CVEs |
@@ -401,10 +471,12 @@ Roles execute in priority order. Roles with the same priority can run in paralle
 
 ### Prerequisite gates
 
-Each role checks that its required sections exist in `specs/arch.md` before starting. If a prerequisite section is missing, the role emits `"status": "blocked"` and the pipeline halts for that branch. This prevents downstream roles from producing output based on incomplete upstream work.
+Each role checks that its required sections exist before starting. If a prerequisite is missing, the role emits `"status": "blocked"` and the pipeline halts for that branch.
 
 ```
-architect        → blocked if specs/prd.md missing
+spec-linter      → blocked if specs/prd.md missing
+                   emits clean=false (non-blocking warning) if structure issues found
+architect        → blocked if spec-linter did not complete, or specs/prd.md missing
 interface-designer → blocked if "Component Design" section missing from arch.md
 security-analyst → blocked if "Interface Design" section missing
 edge-case-analyst → blocked if "Interface Design" OR "Security Analysis" missing
@@ -548,4 +620,4 @@ tests/
 2. Create `specs/recipes/{role-name}.yaml` — follow the existing recipe format including the `RoleCompletionEnvelope` output contract
 3. Add the role class to `BUILTIN_ROLES` in `src/sdd_server/plugins/roles/__init__.py`
 4. Add any new `RoleStage` enum value to `src/sdd_server/plugins/base.py` if needed
-5. Update count assertions in tests (`== 10` → `== 11`, etc.)
+5. Update count assertions in tests (`== 11` → `== 12`, etc.)

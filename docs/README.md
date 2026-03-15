@@ -23,7 +23,7 @@ sdd-server
 ### API Reference
 
 - **[API Overview](api/README.md)** - Quick reference for all MCP tools
-- **[Tools Reference](api/tools.md)** - Complete MCP tools documentation (44 tools)
+- **[Tools Reference](api/tools.md)** - Complete MCP tools documentation (46 tools)
 - **[Resources Reference](api/resources.md)** - MCP resources for spec files
 - **[Prompts Reference](api/prompts.md)** - Role-specific AI prompts
 
@@ -72,7 +72,7 @@ sdd-server
 
 ### 🔄 Role-Based Reviews
 
-- 6 built-in review roles
+- 11 built-in review roles
 - Dependency-aware execution
 - Parallel review support
 - Extensible plugin system
@@ -103,14 +103,19 @@ sdd-server/
 
 ## Built-in Roles
 
-| Role | Stage | Purpose |
-|------|-------|---------|
-| Architect | Planning | System design and architecture |
-| Developer | Development | Implementation guidance |
-| Reviewer | Review | Code quality review |
-| QA | Testing | Test coverage and quality |
-| Security | Review | Security audit |
-| DevOps | Deployment | Infrastructure and deployment |
+| Priority | Role | Stage | Purpose |
+|----------|------|-------|---------|
+| 5 | `spec-linter` | SPEC_AUDIT | Validates spec structure before pipeline starts |
+| 10 | `architect` | ARCHITECTURE | System design and component architecture |
+| 20 | `interface-designer` | INTERFACE_DESIGN | API contracts, schemas, error catalogue |
+| 20 | `ui-designer` | UI_DESIGN | User flows, WCAG 2.1, component inventory |
+| 30 | `security-analyst` | SECURITY | OWASP Top 10, threat model, CVE scan |
+| 40 | `edge-case-analyst` | EDGE_CASE_ANALYSIS | Edge cases and test scenarios |
+| 50 | `senior-developer` | IMPLEMENTATION | Code quality, coverage gaps, tech debt |
+| 60 | `qa-engineer` | QA | Acceptance criteria coverage, defect list |
+| 60 | `tech-writer` | DOCUMENTATION | Doc inventory, changelog entry |
+| 60 | `devops-engineer` | DEVOPS | CI/CD, Dockerfile, secrets, observability |
+| 80 | `product-owner` | RELEASE | SHIP / HOLD release verdict |
 
 ## Configuration
 
