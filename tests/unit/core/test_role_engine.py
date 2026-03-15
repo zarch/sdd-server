@@ -17,8 +17,9 @@ async def registry_with_roles() -> PluginRegistry:
     await loader.discover_plugins()
     registry = PluginRegistry()
 
-    # Register in dependency order
+    # Register in dependency order (spec-linter must come before architect)
     for name in [
+        "spec-linter",
         "architect",
         "ui-designer",
         "interface-designer",
@@ -49,11 +50,11 @@ class TestRoleEngine:
 
         results = await engine.run_all(parallel=False)
 
-        # Should have 6 results
-        assert len(results) == 6
+        # Should have 7 results
+        assert len(results) == 7
 
         # All roles should be completed
-        assert len(engine.completed_roles) == 6
+        assert len(engine.completed_roles) == 7
         assert len(engine.failed_roles) == 0
 
     @pytest.mark.asyncio
@@ -63,11 +64,11 @@ class TestRoleEngine:
 
         results = await engine.run_all(parallel=True)
 
-        # Should have 6 results
-        assert len(results) == 6
+        # Should have 7 results
+        assert len(results) == 7
 
         # All roles should be completed
-        assert len(engine.completed_roles) == 6
+        assert len(engine.completed_roles) == 7
 
     @pytest.mark.asyncio
     async def test_run_specific_roles(self, registry_with_roles: PluginRegistry) -> None:
@@ -99,8 +100,8 @@ class TestRoleEngine:
         await engine.run_all()
 
         status = engine.get_status()
-        assert status["total_results"] == 6
-        assert len(status["completed"]) == 6
+        assert status["total_results"] == 7
+        assert len(status["completed"]) == 7
         assert len(status["failed"]) == 0
 
     @pytest.mark.asyncio
@@ -121,8 +122,10 @@ class TestRoleEngine:
 
         graph = engine.get_dependency_graph()
 
-        # Architect has no dependencies
-        assert graph["architect"] == []
+        # Spec-linter has no dependencies (first in chain)
+        assert graph["spec-linter"] == []
+        # Architect depends on spec-linter
+        assert graph["architect"] == ["spec-linter"]
 
         # UI Designer depends on architect
         assert "architect" in graph["ui-designer"]
@@ -147,8 +150,10 @@ class TestRoleEngine:
         order = registry_with_roles.get_execution_order()
         levels = engine._build_execution_levels(order)
 
-        # First level should only have architect (no dependencies)
-        assert "architect" in levels[0]
+        # First level should only have spec-linter (no dependencies)
+        assert "spec-linter" in levels[0]
+        # Architect is in the second level (depends on spec-linter)
+        assert "architect" in levels[1]
 
         # Last level should have senior-developer (most dependencies)
         assert "senior-developer" in levels[-1]
@@ -163,13 +168,15 @@ class TestRoleEngine:
         # Run and collect order
         results = await engine.run_all(parallel=False)
 
-        # Verify all 6 roles completed
-        assert len(results) == 6
+        # Verify all 7 roles completed
+        assert len(results) == 7
 
         # In sequential mode, roles run in topological order
-        # Architect is always first
+        # Spec-linter is always first (no dependencies, priority 5)
         result_names = list(results.keys())
-        assert result_names[0] == "architect"
+        assert result_names[0] == "spec-linter"
+        # Architect follows spec-linter
+        assert result_names.index("architect") > result_names.index("spec-linter")
 
     @pytest.mark.asyncio
     async def test_update_context_merges_values(self, registry_with_roles: PluginRegistry) -> None:
