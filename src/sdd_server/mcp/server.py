@@ -137,6 +137,7 @@ def create_server() -> FastMCP:
     from sdd_server.mcp.prompts.review import register_prompts as reg_prompts
     from sdd_server.mcp.resources.specs import register_resources
     from sdd_server.mcp.tools.align import register_tools as reg_align
+    from sdd_server.mcp.tools.bootstrap import register_tools as reg_bootstrap
     from sdd_server.mcp.tools.codegen import register_tools as reg_codegen
     from sdd_server.mcp.tools.custom_plugins import register_tools as reg_custom_plugins
     from sdd_server.mcp.tools.decompose import register_tools as reg_decompose
@@ -159,6 +160,7 @@ def create_server() -> FastMCP:
     reg_validation(server)
     reg_custom_plugins(server)
     reg_align(server)
+    reg_bootstrap(server)
     reg_decompose(server)
     reg_health(server)
     reg_prompts(server)
