@@ -167,8 +167,7 @@ class TestRecipeGeneratorAllRecipes:
             {"project_name": "TestProject", "description": "A test"},
         )
 
-        # Should have 6 recipes
-        assert len(paths) == 10
+        assert len(paths) == 11
 
         # All should exist
         for path in paths:
@@ -186,8 +185,10 @@ class TestRecipeGeneratorAllRecipes:
 
         names = [p.stem for p in paths]
 
-        # Architect should be first (no dependencies)
-        assert names[0] == "architect"
+        # Spec linter should be first (no dependencies, priority 5)
+        assert names[0] == "spec-linter"
+        # Architect is second (depends on spec-linter)
+        assert names[1] == "architect"
 
         # Product owner should be last (depends on qa, tech-writer, devops)
         assert names[-1] == "product-owner"
@@ -231,7 +232,7 @@ class TestRecipeGeneratorContext:
 
         assert context["role_name"] == "architect"
         assert context["role_version"] == "1.0.0"
-        assert context["role_dependencies"] == []
+        assert context["role_dependencies"] == ["spec-linter"]
 
     def test_get_recipe_context_includes_date(
         self,
@@ -372,10 +373,13 @@ class TestRecipeGeneratorIntegration:
         self,
         tmp_project: Path,
     ) -> None:
-        """Test generator with single registered role."""
+        """Test generator with two registered roles (spec-linter + architect)."""
         from sdd_server.plugins.roles.architect import ArchitectRole
+        from sdd_server.plugins.roles.spec_linter import SpecLinterRole
 
         registry = PluginRegistry()
+        linter = SpecLinterRole()
+        registry.register(linter.metadata.name, linter)
         role = ArchitectRole()
         registry.register(role.metadata.name, role)
 

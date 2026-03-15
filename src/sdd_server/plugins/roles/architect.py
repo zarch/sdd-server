@@ -41,9 +41,9 @@ class ArchitectRole(RolePlugin):
         version="1.0.0",
         description="System architecture design and review",
         author="SDD Team",
-        priority=10,  # Highest priority - runs first
+        priority=10,
         stage=RoleStage.ARCHITECTURE,
-        dependencies=[],  # No dependencies
+        dependencies=["spec-linter"],
     )
 
     async def initialize(self, context: dict[str, Any]) -> None:

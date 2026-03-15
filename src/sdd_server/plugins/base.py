@@ -55,6 +55,7 @@ class RoleStage(StrEnum):
     Dependencies between stages are handled by RoleEngine.
     """
 
+    SPEC_AUDIT = "spec-audit"
     ARCHITECTURE = "architecture"
     UI_DESIGN = "ui-design"
     INTERFACE_DESIGN = "interface-design"
@@ -198,6 +199,7 @@ class RolePlugin(BasePlugin):
     - Returns structured RoleResult after execution
 
     Built-in roles:
+    - spec-linter: Pre-flight spec structure and consistency validator (stage: SPEC_AUDIT)
     - architect: System architecture design (stage: ARCHITECTURE)
     - ui-designer: UI/UX design review (stage: UI_DESIGN)
     - interface-designer: API/interface design (stage: INTERFACE_DESIGN)

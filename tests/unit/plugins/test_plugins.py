@@ -169,7 +169,7 @@ class TestBuiltInRoles:
 
     def test_builtin_roles_count(self) -> None:
         """Test we have 6 built-in roles."""
-        assert len(BUILTIN_ROLES) == 10
+        assert len(BUILTIN_ROLES) == 11
 
     def test_architect_role_metadata(self) -> None:
         """Test ArchitectRole metadata."""
@@ -177,7 +177,7 @@ class TestBuiltInRoles:
         assert role.metadata.name == "architect"
         assert role.metadata.priority == 10
         assert role.metadata.stage == RoleStage.ARCHITECTURE
-        assert role.get_dependencies() == []
+        assert role.get_dependencies() == ["spec-linter"]
 
     def test_ui_designer_role_metadata(self) -> None:
         """Test UIDesignerRole metadata."""
@@ -275,9 +275,11 @@ class TestPluginRegistry:
         """Test registering a role plugin."""
         loader = PluginLoader()
         await loader.discover_plugins()
+        spec_linter = await loader.load_plugin("spec-linter")
         architect = await loader.load_plugin("architect")
 
         registry = PluginRegistry()
+        registry.register("spec-linter", spec_linter)
         registry.register("architect", architect)
 
         assert registry.has_role("architect")
@@ -288,9 +290,11 @@ class TestPluginRegistry:
         """Test registering duplicate raises error."""
         loader = PluginLoader()
         await loader.discover_plugins()
+        spec_linter = await loader.load_plugin("spec-linter")
         architect = await loader.load_plugin("architect")
 
         registry = PluginRegistry()
+        registry.register("spec-linter", spec_linter)
         registry.register("architect", architect)
 
         with pytest.raises(PluginError, match="already registered"):
@@ -317,14 +321,21 @@ class TestPluginRegistry:
         registry = PluginRegistry()
 
         # Register in dependency order
-        for name in ["architect", "ui-designer", "interface-designer", "security-analyst"]:
+        for name in [
+            "spec-linter",
+            "architect",
+            "ui-designer",
+            "interface-designer",
+            "security-analyst",
+        ]:
             plugin = await loader.load_plugin(name)
             registry.register(name, plugin)
 
         roles = registry.get_roles_sorted_by_priority()
-        assert len(roles) == 4
-        # Architect has lowest priority number (highest priority)
-        assert roles[0].metadata.name == "architect"
+        assert len(roles) == 5
+        # Spec linter has lowest priority number (runs first)
+        assert roles[0].metadata.name == "spec-linter"
+        assert roles[1].metadata.name == "architect"
 
     @pytest.mark.asyncio
     async def test_get_execution_order(self) -> None:
@@ -335,6 +346,7 @@ class TestPluginRegistry:
 
         # Register all in dependency order
         for name in [
+            "spec-linter",
             "architect",
             "ui-designer",
             "interface-designer",
@@ -346,8 +358,10 @@ class TestPluginRegistry:
             registry.register(name, plugin)
 
         order = registry.get_execution_order()
-        # Architect must come first
-        assert order[0] == "architect"
+        # Spec linter must come first
+        assert order[0] == "spec-linter"
+        # Architect must come after spec-linter
+        assert order.index("architect") > order.index("spec-linter")
         # Security must come after interface-designer
         assert order.index("security-analyst") > order.index("interface-designer")
         # Senior-developer must come last

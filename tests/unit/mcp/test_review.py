@@ -29,7 +29,7 @@ class TestReviewList:
 
         assert "roles" in result
         assert "count" in result
-        assert result["count"] == 10
+        assert result["count"] == 11
 
     @pytest.mark.asyncio
     async def test_list_roles_sorted_by_priority(self, mcp_server: FastMCP) -> None:
@@ -48,8 +48,10 @@ class TestReviewList:
 
         roles_by_name = {r["name"]: r for r in result["roles"]}
 
-        # Architect has no dependencies
-        assert roles_by_name["architect"]["dependencies"] == []
+        # Spec linter has no dependencies (first in chain)
+        assert roles_by_name["spec-linter"]["dependencies"] == []
+        # Architect depends on spec-linter
+        assert roles_by_name["architect"]["dependencies"] == ["spec-linter"]
 
         # Senior developer depends on all others
         assert len(roles_by_name["senior-developer"]["dependencies"]) > 0
@@ -225,7 +227,7 @@ class TestRecipesGenerate:
         )
 
         assert "generated" in result
-        assert result["count"] == 10
+        assert result["count"] == 11
 
     @pytest.mark.asyncio
     async def test_generate_validates_recipes(self, mcp_server: FastMCP, tmp_project) -> None:
