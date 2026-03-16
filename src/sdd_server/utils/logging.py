@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 
 import structlog
 
@@ -14,7 +15,6 @@ def configure_logging(level: str = "INFO", json_output: bool = False) -> None:
     processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
-        structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.ExceptionPrettyPrinter(),
@@ -29,11 +29,11 @@ def configure_logging(level: str = "INFO", json_output: bool = False) -> None:
         processors=processors,
         wrapper_class=structlog.make_filtering_bound_logger(log_level),
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(),
+        logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
         cache_logger_on_first_use=True,
     )
 
-    logging.basicConfig(level=log_level)
+    logging.basicConfig(level=log_level, stream=sys.stderr)
 
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:

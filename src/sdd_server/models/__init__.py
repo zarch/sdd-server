@@ -14,6 +14,7 @@ from sdd_server.models.custom_plugin import (
     CustomPluginRegistry,
     CustomPluginType,
 )
+from sdd_server.models.enums import RoleStage, RoleStatus
 from sdd_server.models.spec import Feature, PRDMetadata, SpecFile, SpecType
 from sdd_server.models.state import (
     BypassRecord,
@@ -56,6 +57,8 @@ __all__ = [
     "PRDMetadata",
     "ProjectState",
     "ProjectValidationResult",
+    "RoleStage",
+    "RoleStatus",
     "SDDBaseModel",
     "ScaffoldConfig",
     "SpecFile",

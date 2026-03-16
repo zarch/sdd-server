@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 
 from sdd_server.models.base import SDDBaseModel
-from sdd_server.plugins.base import RoleStage
+from sdd_server.models.enums import RoleStage
 
 
 class CustomPluginType(StrEnum):

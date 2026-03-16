@@ -169,4 +169,10 @@ def create_server() -> FastMCP:
     return server
 
 
+# Configure logging before create_server() so that registration-time log calls
+# (e.g. in reg_prompts / reg_codegen) are routed to stderr, not stdout.
+# stdout is reserved for the MCP stdio protocol; writing to it before the
+# handshake causes a BrokenPipeError.
+configure_logging(level=os.getenv("SDD_LOG_LEVEL", "INFO"))
+
 mcp = create_server()

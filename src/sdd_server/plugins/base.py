@@ -12,7 +12,6 @@ Architecture reference: arch.md Section 9.1-9.2
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +24,7 @@ from sdd_server.infrastructure.exceptions import (
     PluginValidationError,
 )
 from sdd_server.models.base import SDDBaseModel
+from sdd_server.models.enums import RoleStage, RoleStatus
 
 # Re-export for type checkers
 __all__ = [
@@ -41,42 +41,6 @@ __all__ = [
     "validate_plugin_metadata",
     "validate_role_plugin",
 ]
-
-
-# =============================================================================
-# Enums
-# =============================================================================
-
-
-class RoleStage(StrEnum):
-    """Workflow stages for role execution.
-
-    Order defines the default execution sequence.
-    Dependencies between stages are handled by RoleEngine.
-    """
-
-    SPEC_AUDIT = "spec-audit"
-    ARCHITECTURE = "architecture"
-    UI_DESIGN = "ui-design"
-    INTERFACE_DESIGN = "interface-design"
-    SECURITY = "security"
-    EDGE_CASE_ANALYSIS = "edge-case-analysis"
-    IMPLEMENTATION = "implementation"
-    REVIEW = "review"
-    QA = "qa"
-    DOCUMENTATION = "documentation"
-    DEVOPS = "devops"
-    RELEASE = "release"
-
-
-class RoleStatus(StrEnum):
-    """Status of a role execution."""
-
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    SKIPPED = "skipped"
 
 
 # =============================================================================
